@@ -1,0 +1,47 @@
+<Window x:Class="QuickTranslate.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="帮助 - QuickTranslate"
+        Height="540" Width="620"
+        MinHeight="420" MinWidth="520"
+        WindowStartupLocation="CenterScreen"
+        Style="{StaticResource AppWindowStyle}">
+    <Grid Margin="16,14,16,14">
+        <Border Style="{StaticResource CardBorderStyle}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
+                <StackPanel Margin="20,18,20,20">
+                    <TextBlock FontSize="18" FontWeight="Bold" Foreground="#FF1E3550" Text="QuickTranslate 翻译助手"/>
+                    <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="#FF6E8CAD" LineHeight="22"
+                               Text="后台常驻的托盘翻译工具：在任何程序中选中文本或图片，按下热键即可通过 OpenAI 兼容接口翻译为指定语言，结果以浮窗形式显示在选中内容附近。"/>
+
+                    <TextBlock FontWeight="Bold" Margin="0,18,0,8" Foreground="#FF1E3550" Text="默认热键（可在首选项中修改）"/>
+                    <Border Background="#FFF7FBFF" BorderBrush="#FFC9DDF6" BorderThickness="1"
+                            CornerRadius="10" Padding="14,12">
+                        <TextBlock TextWrapping="Wrap" LineHeight="24" Foreground="#FF1E3550">
+                            <Run Text="· "/><Run Text="Ctrl+Alt+T" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  翻译为中文"/><LineBreak/>
+                            <Run Text="· "/><Run Text="Ctrl+Alt+E" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  翻译为英文"/><LineBreak/>
+                            <Run Text="· "/><Run Text="Ctrl+Alt+J" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  翻译为日语"/><LineBreak/>
+                            <Run Text="· "/><Run Text="Ctrl+Alt+R" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  生成回复"/><LineBreak/>
+                            <Run Text="· "/><Run Text="Ctrl+Alt+Q" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  截图翻译（全屏框选区域后识别）"/>
+                        </TextBlock>
+                    </Border>
+
+                    <TextBlock FontWeight="Bold" Margin="0,18,0,8" Foreground="#FF1E3550" Text="使用说明"/>
+                    <TextBlock TextWrapping="Wrap" LineHeight="24" Foreground="#FF1E3550">
+                        <Run Text="1. 右键托盘图标 → 首选项，配置 API Key 与模型（可点「获取模型列表」自动拉取），并设置热键。"/><LineBreak/>
+                        <Run Text="2. 在任意程序中选中文本（或选中/复制图片），按对应热键。"/><LineBreak/>
+                        <Run Text="3. 翻译结果显示在选中内容附近（默认上方，空间不足自动偏移或覆盖）。"/><LineBreak/>
+                        <Run Text="4. 按 "/><Run Text="Esc" FontWeight="Bold"/><Run Text=" 关闭浮窗；右键浮窗可复制、重新翻译、生成回复、切换语言。"/><LineBreak/>
+                        <Run Text="5. 图片翻译默认把原图发给视觉模型；模型不支持图片时自动改用本地 OCR。"/>
+                    </TextBlock>
+
+                    <TextBlock FontWeight="Bold" Margin="0,18,0,8" Foreground="#FF1E3550" Text="技术说明"/>
+                    <TextBlock TextWrapping="Wrap" LineHeight="22" Foreground="#FF6E8CAD"
+                               Text="WPF + C# 主程序（托盘、热键、弹窗、API 客户端）；C++ 原生库 NativeCore.dll 负责系统级操作（模拟复制选中内容、屏幕截图、Windows.Media.Ocr 文字识别），C# 通过 P/Invoke 与之互操作。原生库缺失时自动回退到托管实现，应用仍可正常使用。"/>
+
+                    <TextBlock Margin="0,20,0,0" Foreground="#FF9BB2CB" Text="QuickTranslate v0.1.0"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>

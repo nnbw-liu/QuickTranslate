@@ -1,0 +1,19 @@
+# 编译中间产物（dist 里的发布产物是要提交的，故不在此列）
+[Bb]in/
+[Oo]bj/
+src/NativeCore/build/
+src/NativeCore/x64/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+*.log
+*.tmp
+*.qtbak
+
+# 本地设置/密钥绝不入库
+settings.json
+appsettings*.json
+*.pfx
+*.snk
