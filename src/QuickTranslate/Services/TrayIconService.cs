@@ -50,6 +50,7 @@ public sealed class TrayIconService : IDisposable
         }
 
         _menu.Items.Add("截图翻译", null, (_, _) => MenuAction?.Invoke("ocr"));
+        _menu.Items.Add("输入翻译（输入框）", null, (_, _) => MenuAction?.Invoke("input"));
         _menu.Items.Add("生成回复", null, (_, _) => MenuAction?.Invoke("reply"));
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add("首选项…", null, (_, _) => MenuAction?.Invoke("prefs"));

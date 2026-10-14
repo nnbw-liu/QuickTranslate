@@ -50,6 +50,8 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- 标题栏 -->
@@ -65,11 +67,15 @@
                         FontSize="12" Click="Close_Click" ToolTip="关闭 (Esc)"/>
             </Grid>
 
-            <ProgressBar x:Name="Busy" Grid.Row="1" Height="3" Margin="16,0,16,2"
+            <!-- 本次请求实际使用的 API / 模型（多 API 时一眼确认走的是哪个） -->
+            <TextBlock x:Name="ModelText" Grid.Row="1" Margin="16,2,16,0" FontSize="10.5"
+                       Foreground="#FFA9BBD0" TextTrimming="CharacterEllipsis" Visibility="Collapsed"/>
+
+            <ProgressBar x:Name="Busy" Grid.Row="2" Height="3" Margin="16,4,16,2"
                          IsIndeterminate="True" Visibility="Collapsed"/>
 
             <!-- 内容区：横向滚动必须禁用，否则 ScrollViewer 会以无限宽度测量子元素，TextWrapping 失效（长文本不换行） -->
-            <ScrollViewer x:Name="Scroll" Grid.Row="2" MaxHeight="460" Margin="16,2,16,6"
+            <ScrollViewer x:Name="Scroll" Grid.Row="3" MaxHeight="460" Margin="16,2,16,6"
                           VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                           Focusable="True">
                 <StackPanel>
@@ -80,7 +86,7 @@
                                  Padding="0" BorderThickness="0" Background="Transparent" VerticalScrollBarVisibility="Disabled"/>
                     </Expander>
                     <StackPanel x:Name="ReasoningPanel" Visibility="Collapsed" Margin="0,8,0,0">
-                        <TextBlock Text="思考过程" FontSize="11" FontWeight="SemiBold" Foreground="#9BB2CB"/>
+                        <TextBlock Text="思考过程（实时）" FontSize="11" FontWeight="SemiBold" Foreground="#9BB2CB"/>
                         <TextBox x:Name="ReasoningText" TextWrapping="Wrap" FontSize="12" Foreground="#7C8A9B"
                                  Margin="0,4,0,0" IsReadOnly="True" IsReadOnlyCaretVisible="False"
                                  Padding="0" BorderThickness="0" Background="Transparent"
@@ -93,8 +99,12 @@
                 </StackPanel>
             </ScrollViewer>
 
+            <!-- 提示条：例如「已达到最大输出 Token 上限」，流结束后依然保留 -->
+            <TextBlock x:Name="NoticeText" Grid.Row="4" Visibility="Collapsed" TextWrapping="Wrap"
+                       Margin="16,0,16,8" FontSize="11" Foreground="#FFB26B00"/>
+
             <!-- 底部操作栏 -->
-            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="14,0,14,12">
+            <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="14,0,14,12">
                 <Button x:Name="CopyBtn" Content="复制" Padding="10,4" Click="CopyResult_Click"/>
                 <Button x:Name="RetranslateBtn" Content="重新翻译" Padding="10,4" Margin="6,0,0,0" Click="Retranslate_Click"/>
                 <Button x:Name="ReplyBtn" Content="生成回复" Padding="10,4" Margin="6,0,0,0" Click="Reply_Click"/>

@@ -5,7 +5,8 @@ using QuickTranslate.Models;
 
 namespace QuickTranslate.Views;
 
-public partial class PopupWindow : Window
+/// <summary>翻译结果浮窗：流式显示译文与思考过程（实现 <see cref="IStreamSink"/> 供 TranslateController 写入）。</summary>
+public partial class PopupWindow : Window, IStreamSink
 {
     public HotkeyEntry? Entry { get; private set; }
     public CaptureResult? Capture { get; private set; }
@@ -59,6 +60,8 @@ public partial class PopupWindow : Window
         CopyBtn.IsEnabled = RetranslateBtn.IsEnabled = ReplyBtn.IsEnabled = false;
         OcrBtn.Visibility = Visibility.Collapsed;
         HintText.Visibility = Visibility.Collapsed;
+        SetModel("");   // 模型标签由 Controller 在解析出本次的 API + 模型后填入
+        ClearNotice();
         Show(); // ShowActivated=False：显示时不抢焦点，避免干扰捕获/用户程序
         Position(cx, cy);
     }
@@ -78,6 +81,34 @@ public partial class PopupWindow : Window
     }
 
     public void SetStatus(string s) => StatusText.Text = s;
+
+    /// <summary>显示本次请求实际使用的「API / 模型」。</summary>
+    public void SetModel(string providerModel)
+    {
+        if (string.IsNullOrWhiteSpace(providerModel))
+        {
+            ModelText.Visibility = Visibility.Collapsed;
+            return;
+        }
+        ModelText.Text = "模型：" + providerModel;
+        ModelText.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>在浮窗底部显示一条常驻提示（如「已达到最大输出 Token 上限」），不会被 EndStream 清掉。</summary>
+    public void SetNotice(string text)
+    {
+        NoticeText.Text = text;
+        NoticeText.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    public void ClearNotice()
+    {
+        NoticeText.Text = "";
+        NoticeText.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>当前是否显示了提示条（如「已达最大输出 Token 上限」）。</summary>
+    public bool HasNotice => NoticeText.Visibility == Visibility.Visible;
 
     // ---------- 流式输出 ----------
 
@@ -99,6 +130,7 @@ public partial class PopupWindow : Window
         CopyBtn.IsEnabled = RetranslateBtn.IsEnabled = ReplyBtn.IsEnabled = false;
         OcrBtn.Visibility = Visibility.Collapsed;
         HintText.Visibility = Visibility.Collapsed;
+        ClearNotice();
         RepositionToSelectionOrCursor();
         Activate(); // 捕获已完成，此时可安全获得焦点：ESC 可取消流式，且下次热键关闭时会还原焦点
         Scroll.ScrollToEnd();
@@ -128,7 +160,9 @@ public partial class PopupWindow : Window
         Entry = entry;
         IsStreaming = false;
         Busy.Visibility = Visibility.Collapsed;
-        StatusText.Text = entry.Name;
+        // 有提示条时保留当前状态文案（例如「模型只输出了思考过程」），否则恢复为热键名；
+        // 否则 SetStatus 写的说明会被这里覆盖掉，用户什么也看不到。
+        if (!HasNotice) StatusText.Text = entry.Name;
         CopyBtn.IsEnabled = RetranslateBtn.IsEnabled = ReplyBtn.IsEnabled = true;
         OcrBtn.Visibility = Visibility.Collapsed;
         HintText.Visibility = Visibility.Visible;
@@ -144,6 +178,7 @@ public partial class PopupWindow : Window
         ReasoningText.Text = "";
         ReasoningPanel.Visibility = Visibility.Collapsed;
         ResultText.Margin = new Thickness(0, 4, 0, 0);
+        ClearNotice();
     }
 
     public void ShowResult(string text, HotkeyEntry entry)
@@ -171,6 +206,7 @@ public partial class PopupWindow : Window
     {
         IsStreaming = false;
         Busy.Visibility = Visibility.Collapsed;
+        StatusText.Text = "出错了";   // 不回退：错误直接把状态与原因都写出来
         if (ResultText.Text.Length > 0)
             ResultText.AppendText("\n\n[错误] " + msg);
         else

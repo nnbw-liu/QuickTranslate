@@ -22,17 +22,20 @@
                             <Run Text="· "/><Run Text="Ctrl+Alt+E" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  翻译为英文"/><LineBreak/>
                             <Run Text="· "/><Run Text="Ctrl+Alt+J" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  翻译为日语"/><LineBreak/>
                             <Run Text="· "/><Run Text="Ctrl+Alt+R" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  生成回复"/><LineBreak/>
-                            <Run Text="· "/><Run Text="Ctrl+Alt+Q" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  截图翻译（全屏框选区域后识别）"/>
+                            <Run Text="· "/><Run Text="Ctrl+Alt+Q" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  截图翻译（全屏框选区域后识别）"/><LineBreak/>
+                            <Run Text="· "/><Run Text="Ctrl+Alt+I" FontWeight="Bold" Foreground="#FF2E6BD0"/><Run Text="  输入翻译（弹出置顶输入框，填写内容后翻译）"/>
                         </TextBlock>
                     </Border>
 
                     <TextBlock FontWeight="Bold" Margin="0,18,0,8" Foreground="#FF1E3550" Text="使用说明"/>
                     <TextBlock TextWrapping="Wrap" LineHeight="24" Foreground="#FF1E3550">
-                        <Run Text="1. 右键托盘图标 → 首选项，配置 API Key 与模型（可点「获取模型列表」自动拉取），并设置热键。"/><LineBreak/>
-                        <Run Text="2. 在任意程序中选中文本（或选中/复制图片），按对应热键。"/><LineBreak/>
-                        <Run Text="3. 翻译结果显示在选中内容附近（默认上方，空间不足自动偏移或覆盖）。"/><LineBreak/>
-                        <Run Text="4. 按 "/><Run Text="Esc" FontWeight="Bold"/><Run Text=" 关闭浮窗；右键浮窗可复制、重新翻译、生成回复、切换语言。"/><LineBreak/>
-                        <Run Text="5. 图片翻译默认把原图发给视觉模型；模型不支持图片时自动改用本地 OCR。"/>
+                        <Run Text="1. 右键托盘图标 → 首选项 → 模型：添加一个或多个 OpenAI 兼容 API（各自的地址 / Key / 模型，可点「获取模型列表」自动拉取），并选定「默认模型」。"/><LineBreak/>
+                        <Run Text="2. 需要时在「模型」页添加多个 API 并选定「默认模型」，再给某条热键单独指定 API 与模型；优先级：热键模型 &gt; 默认模型。"/><LineBreak/>
+                        <Run Text="3. 在任意程序中选中文本（或选中/复制图片），按对应热键。"/><LineBreak/>
+                        <Run Text="4. 翻译结果显示在选中内容附近（默认上方，空间不足自动偏移或覆盖）。"/><LineBreak/>
+                        <Run Text="5. 按 "/><Run Text="Esc" FontWeight="Bold"/><Run Text=" 关闭浮窗；右键浮窗可复制、重新翻译、生成回复、切换语言。"/><LineBreak/>
+                        <Run Text="6. 图片翻译默认把原图发给视觉模型；模型不支持图片时自动改用本地 OCR（可在每个 API 上单独设置）。"/><LineBreak/>
+                        <Run Text="7. 按 "/><Run Text="Ctrl+Alt+I" FontWeight="Bold"/><Run Text=" 弹出「输入翻译」置顶窗口：直接在输入框里打字或粘贴，选好目标语言后按 "/><Run Text="Ctrl+Enter" FontWeight="Bold"/><Run Text=" 翻译；按 "/><Run Text="Esc" FontWeight="Bold"/><Run Text=" 关闭并立刻中断正在进行的推理。"/>
                     </TextBlock>
 
                     <TextBlock FontWeight="Bold" Margin="0,18,0,8" Foreground="#FF1E3550" Text="技术说明"/>
