@@ -32,6 +32,7 @@
             <ContextMenu>
                 <MenuItem Header="复制结果" Click="CopyResult_Click"/>
                 <MenuItem Header="复制原文" Click="CopyOriginal_Click"/>
+                <MenuItem x:Name="CopyImageMenuItem" Header="复制原图" Click="CopyOriginalImage_Click" Visibility="Collapsed"/>
                 <Separator/>
                 <MenuItem Header="翻译为中文" Click="TranslateTo_Click" Tag="中文"/>
                 <MenuItem Header="翻译为英文" Click="TranslateTo_Click" Tag="English"/>
@@ -79,6 +80,20 @@
                           VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                           Focusable="True">
                 <StackPanel>
+                    <!-- 原图：截图翻译/图片翻译时把截到的图直接放出来。
+                         只显示「原文」文本的话，用户既看不到译文对应的画面，也分不清这次到底是发了图还是走了 OCR。 -->
+                    <Border x:Name="OriginalImagePanel" Visibility="Collapsed" Margin="0,2,0,8"
+                            Padding="6" CornerRadius="8" HorizontalAlignment="Left"
+                            Background="#FFFFFFFF" BorderBrush="#FFE1EAF6" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock x:Name="OriginalImageCaption" Text="原图" FontSize="10.5"
+                                       Foreground="#9BB2CB" Margin="2,0,0,4"/>
+                            <Image x:Name="OriginalImage" MaxHeight="190" MaxWidth="494"
+                                   Stretch="Uniform" StretchDirection="DownOnly"
+                                   HorizontalAlignment="Left" SnapsToDevicePixels="True"
+                                   ToolTip="右键可「复制原图」"/>
+                        </StackPanel>
+                    </Border>
                     <Expander x:Name="OriginalExpander" Header="原文" IsExpanded="False"
                               Visibility="Collapsed" Foreground="#6E8CAD" FontSize="11.5">
                         <TextBox x:Name="OriginalText" TextWrapping="Wrap" Foreground="#6E8CAD"

@@ -17,6 +17,9 @@
         MouseRightButtonDown="Window_MouseRightButtonDown">
 
     <Grid x:Name="Root">
+        <!-- 遮罩弹出时冻结下来的整屏画面：框选只是从这张图上裁剪，不再实时截屏 -->
+        <Image x:Name="ShotImage" Stretch="Fill" IsHitTestVisible="False"/>
+
         <!-- 半透明遮罩，中间挖出选区 -->
         <Path x:Name="Overlay" Fill="#7A0B1F33" IsHitTestVisible="False">
             <Path.Data>

@@ -1,7 +1,10 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using QuickTranslate.Models;
+using QuickTranslate.Services;
 
 namespace QuickTranslate.Views;
 
@@ -57,6 +60,9 @@ public partial class PopupWindow : Window, IStreamSink
         Busy.Visibility = Visibility.Visible;
         ResultText.Text = "";
         OriginalExpander.Visibility = Visibility.Collapsed;
+        OriginalExpander.Header = "原文";
+        OriginalText.Text = "";
+        ClearOriginalImage();
         CopyBtn.IsEnabled = RetranslateBtn.IsEnabled = ReplyBtn.IsEnabled = false;
         OcrBtn.Visibility = Visibility.Collapsed;
         HintText.Visibility = Visibility.Collapsed;
@@ -69,15 +75,66 @@ public partial class PopupWindow : Window, IStreamSink
     public void SetOriginal(CaptureResult cap)
     {
         Capture = cap;
+
+        // 有图就把图放出来（截图翻译 / 图片翻译）：译文对不对、模型有没有真的看到图，一眼可辨。
+        if (cap.ImageBytes is { Length: > 0 }) ShowOriginalImage(cap.ImageBytes);
+
         if (cap.Kind == CaptureKind.Text)
         {
+            OriginalExpander.Header = "原文";
             OriginalText.Text = cap.Text;
             OriginalExpander.Visibility = Visibility.Visible;
         }
         else if (cap.Kind == CaptureKind.Image)
         {
+            // 图片模式下没有可展示的“原文”文本：先把原文区收起，
+            // 若随后走了本地 OCR，会由 SetOriginalText 重新填上识别结果。
             OriginalExpander.Visibility = Visibility.Collapsed;
         }
+    }
+
+    /// <summary>
+    /// 单独填入「原文」文本（例如本地 OCR 的识别结果），**不影响**已展示的原图与 <see cref="Capture"/>。
+    /// 这样 OCR 回退后用户仍能看到原图，也能看出译文是基于识别文本得到的。
+    /// </summary>
+    public void SetOriginalText(string text, string header = "原文（本地 OCR 识别）")
+    {
+        OriginalExpander.Header = header;
+        OriginalText.Text = text;
+        OriginalExpander.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    /// <summary>把 PNG 字节解码成可冻结的位图（源流立即释放，避免长期占用内存）。</summary>
+    private static BitmapSource? DecodeImage(byte[] png)
+    {
+        try
+        {
+            using var ms = new MemoryStream(png);
+            var frame = BitmapFrame.Create(ms, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            frame.Freeze();
+            return frame;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex);
+            return null;
+        }
+    }
+
+    private void ShowOriginalImage(byte[] png)
+    {
+        var frame = DecodeImage(png);
+        if (frame == null) return;
+        OriginalImage.Source = frame;
+        OriginalImagePanel.Visibility = Visibility.Visible;
+        CopyImageMenuItem.Visibility = Visibility.Visible;
+    }
+
+    private void ClearOriginalImage()
+    {
+        OriginalImage.Source = null;
+        OriginalImagePanel.Visibility = Visibility.Collapsed;
+        CopyImageMenuItem.Visibility = Visibility.Collapsed;
     }
 
     public void SetStatus(string s) => StatusText.Text = s;
@@ -284,10 +341,19 @@ public partial class PopupWindow : Window, IStreamSink
 
     private void CopyOriginal()
     {
-        if (Capture?.Kind == CaptureKind.Text && !string.IsNullOrEmpty(Capture.Text))
-        {
-            try { System.Windows.Clipboard.SetText(Capture.Text); } catch { }
-        }
+        // 优先复制界面上真正展示的「原文」：图片 + 本地 OCR 时，原文就是那段识别结果
+        var text = OriginalText.Text.Length > 0 ? OriginalText.Text : Capture?.Text ?? "";
+        if (text.Length == 0) return;
+        try { System.Windows.Clipboard.SetText(text); } catch { }
+    }
+
+    /// <summary>复制原图到剪贴板（截图翻译 / 图片翻译时可用）。</summary>
+    private void CopyOriginalImage()
+    {
+        if (Capture?.ImageBytes is not { Length: > 0 } bytes) return;
+        var frame = DecodeImage(bytes);
+        if (frame == null) return;
+        try { System.Windows.Clipboard.SetImage(frame); } catch (Exception ex) { Log.Error(ex); }
     }
 
     // ---------- 事件处理 ----------
@@ -295,6 +361,8 @@ public partial class PopupWindow : Window, IStreamSink
     private void CopyResult_Click(object sender, RoutedEventArgs e) => CopyResult();
 
     private void CopyOriginal_Click(object sender, RoutedEventArgs e) => CopyOriginal();
+
+    private void CopyOriginalImage_Click(object sender, RoutedEventArgs e) => CopyOriginalImage();
 
     private void TranslateTo_Click(object sender, RoutedEventArgs e)
     {

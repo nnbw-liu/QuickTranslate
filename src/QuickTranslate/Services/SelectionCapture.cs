@@ -50,7 +50,58 @@ public static class SelectionCapture
         return new CaptureResult();
     }
 
-    /// <summary>截取屏幕上指定区域（物理像素），返回图片结果。</summary>
+    /// <summary>
+    /// 在遮罩弹出「之前」就把整个虚拟桌面冻结成一张位图（物理像素）。
+    /// 框选时只从这张冻结图里裁剪，因此屏幕上后来发生的变化（动画/视频/窗口切换）
+    /// 不会让“看到的内容”和“实际翻译的内容”对不上。
+    /// bounds 始终返回虚拟桌面范围（即使截图失败），供坐标换算使用；失败返回 null。
+    /// </summary>
+    public static Bitmap? CaptureVirtualScreen(out Rectangle bounds)
+    {
+        bounds = Native.NativeWin.GetVirtualScreenBounds();
+        if (bounds.Width <= 0 || bounds.Height <= 0) bounds = SystemInformation.VirtualScreen;
+        if (bounds.Width <= 0 || bounds.Height <= 0) return null;
+
+        try
+        {
+            var bmp = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(bmp))
+                g.CopyFromScreen(bounds.X, bounds.Y, 0, 0, new Size(bounds.Width, bounds.Height), CopyPixelOperation.SourceCopy);
+            return bmp;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex);
+            return null;
+        }
+    }
+
+    /// <summary>从整屏冻结图里裁出屏幕区域（物理像素），返回 PNG 字节；失败返回 null。</summary>
+    public static byte[]? CropToPng(Bitmap screen, Rectangle screenBounds, Rectangle region)
+    {
+        var r = Rectangle.Intersect(region, screenBounds);
+        if (r.Width < 2 || r.Height < 2) return null;
+
+        try
+        {
+            using var crop = new Bitmap(r.Width, r.Height, PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(crop))
+                g.DrawImage(screen,
+                    new Rectangle(0, 0, r.Width, r.Height),
+                    new Rectangle(r.X - screenBounds.X, r.Y - screenBounds.Y, r.Width, r.Height),
+                    GraphicsUnit.Pixel);
+            using var ms = new MemoryStream();
+            crop.Save(ms, ImageFormat.Png);
+            return ms.ToArray();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex);
+            return null;
+        }
+    }
+
+    /// <summary>截取屏幕上指定区域（物理像素），返回图片结果。仅作为冻结失败时的兜底。</summary>
     public static CaptureResult CaptureRegion(Rectangle rect)
     {
         if (rect.Width < 2 || rect.Height < 2) return new CaptureResult();

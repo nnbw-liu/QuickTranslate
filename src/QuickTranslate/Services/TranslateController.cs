@@ -62,22 +62,27 @@ public sealed class TranslateController
             if (entry.Action == "ScreenshotOcr")
             {
                 // 先框选截图、后弹浮窗：顺序反了会把浮窗自己截进图里（也会抢走焦点）。
-                var region = ScreenCaptureWindow.PickRegion();
-                if (region == null)
+                // 截屏本身在遮罩弹出时就已经完成（整屏冻结），框选只是从冻结图里裁剪，
+                // 所以这里不需要再等屏幕重绘、也不会截到已经变化的画面。
+                await Task.Delay(80);   // 等旧弹窗彻底从屏幕消失，避免残影被冻进画面
+                var shot = ScreenCaptureWindow.PickRegion();
+                if (shot == null)
                 {
                     Log.Info("截图翻译: 用户取消了框选");
                     return;
                 }
-                await Task.Delay(160); // 等遮罩窗口消失、屏幕重绘完成
-                var shot = await Task.Run(() => SelectionCapture.CaptureRegion(region.Value));
-                Log.Info($"截图: 区域={region.Value.Width}x{region.Value.Height}@{region.Value.X},{region.Value.Y} 字节={shot.ImageBytes?.Length ?? 0}");
+
+                // 冻结失败（极少数情况）时的兜底：遮罩已关闭，补一次实时截屏
+                if (shot.ImageBytes == null)
+                    shot = await Task.Run(() => SelectionCapture.CaptureRegion(shot.SelectionRect));
+                Log.Info($"截图: 区域={shot.SelectionRect.Width}x{shot.SelectionRect.Height}@{shot.SelectionRect.X},{shot.SelectionRect.Y} 字节={shot.ImageBytes?.Length ?? 0}");
 
                 popup = NewPopup();
                 popup.Closed += (_, _) => { try { cts.Cancel(); } catch { } };
                 popup.ShowLoading(entry.Name, cx, cy);
                 popup.SetModel(sel.Display);
 
-                if (!shot.HasContent)
+                if (shot.ImageBytes == null)
                 {
                     popup.ShowError("屏幕截图失败。");
                     return;
@@ -201,6 +206,7 @@ public sealed class TranslateController
         var prompt = ScreenshotPrompt(entry);
         var client = App.Models.ClientFor(sel);
         var visionFirst = sel.VisionFirst;
+        bool visionRejected = false; // 视觉模型明确拒绝过图片（用来解释“为什么走了 OCR”）
 
         popup.SetOriginal(cap); // 截图没有可展示的“原文”文本，图片模式下不展开原文区
         popup.BeginStream(entry.Name);
@@ -218,19 +224,19 @@ public sealed class TranslateController
             }
             catch (ApiException ex)
             {
-                Log.Info($"截图翻译: 视觉模型失败，回退本地 OCR：{ex.Message}");
-                popup.ClearResult();
-                popup.SetStatus("视觉模型不可用，改用本地 OCR…");
+                NoteVisionUnsupported(popup, ex);
+                visionRejected = true;
             }
         }
 
         var ocr = await SafeOcrAsync(cap.ImageBytes!);
         if (!string.IsNullOrWhiteSpace(ocr))
         {
-            popup.SetOriginal(new CaptureResult { Kind = CaptureKind.Text, Text = ocr });
+            popup.SetOriginalText(ocr);
             popup.SetStatus("正在翻译识别结果…");
             Log.Info("截图翻译: 开始翻译识别结果");
             await StreamIntoAsync(popup, client.TranslateStreamAsync(ocr, target, ct, prompt), sel, ct);
+            if (visionRejected) popup.SetStatus("视觉模型不接受图片，已用本地 OCR 翻译完成");
             popup.EndStream(entry);
             return;
         }
@@ -268,7 +274,7 @@ public sealed class TranslateController
             await StreamIntoAsync(p, client.GenerateReplyFromImageStreamAsync(cap.ImageBytes!, lang, ct, prompt), sel, ct);
             return;
         }
-        p.SetOriginal(new CaptureResult { Kind = CaptureKind.Text, Text = ocr });
+        p.SetOriginalText(ocr);
         p.SetStatus("正在生成回复…");
         await StreamIntoAsync(p, client.GenerateReplyStreamAsync(ocr, lang, ct, prompt), sel, ct);
     }
@@ -304,9 +310,8 @@ public sealed class TranslateController
                 }
                 catch (ApiException ex)
                 {
-                    Log.Info($"图片翻译: 视觉模型失败，回退本地 OCR：{ex.Message}");
-                    visionTried = true; // 视觉失败 → 回退本地 OCR
-                    popup.ClearResult();
+                    NoteVisionUnsupported(popup, ex);
+                    visionTried = true; // 视觉失败（接口不收图片）→ 回退本地 OCR，并把原因说明给用户
                 }
             }
 
@@ -315,9 +320,10 @@ public sealed class TranslateController
             var ocr = await SafeOcrAsync(cap.ImageBytes!);
             if (!string.IsNullOrWhiteSpace(ocr))
             {
-                popup.SetOriginal(new CaptureResult { Kind = CaptureKind.Text, Text = ocr });
+                popup.SetOriginalText(ocr);
                 popup.SetStatus("正在翻译识别结果…");
                 await StreamIntoAsync(popup, client.TranslateStreamAsync(ocr, lang, ct, prompt), sel, ct);
+                if (visionTried) popup.SetStatus("视觉模型不接受图片，已用本地 OCR 翻译完成");
                 return;
             }
 
@@ -398,6 +404,20 @@ public sealed class TranslateController
             }
             throw new ApiException($"{sel.Display} 没有返回任何内容，请检查模型名称与请求参数（可在首选项 → 模型 里测试连接）。");
         }
+    }
+
+    /// <summary>
+    /// 视觉模型拒绝图片时（最常见：该模型不支持图片输入，接口回 HTTP 400）：
+    /// 清掉失败输出、把**接口给的真实原因**写在提示条上，再回退本地 OCR。
+    /// 不写原因的话，界面上只看到「先 OCR 再翻译」，很容易被误认为「默认就是走 OCR」。
+    /// </summary>
+    private static void NoteVisionUnsupported(PopupWindow popup, ApiException ex)
+    {
+        var why = Shorten(ex.Message, 140);
+        Log.Info($"视觉模型不接受图片，回退本地 OCR：{why}");
+        popup.ClearResult();
+        popup.SetNotice($"视觉模型直发失败：{why}（已回退本地 OCR；可在 首选项 → 模型 里换成支持图片的视觉模型）");
+        popup.SetStatus("视觉模型不接受图片，改用本地 OCR…");
     }
 
     /// <summary>OCR 的健壮封装：任何异常/中断都不会向外抛，只返回 null（触发回退）。</summary>

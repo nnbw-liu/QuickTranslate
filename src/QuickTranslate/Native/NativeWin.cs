@@ -50,6 +50,31 @@ public static class NativeWin
     public static extern uint GetDpiForSystem();
 
     [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
+
+    private const int SM_XVIRTUALSCREEN = 76;
+    private const int SM_YVIRTUALSCREEN = 77;
+    private const int SM_CXVIRTUALSCREEN = 78;
+    private const int SM_CYVIRTUALSCREEN = 79;
+
+    /// <summary>
+    /// 整个虚拟桌面（所有显示器）的物理像素范围；取不到时返回空矩形。
+    /// </summary>
+    public static System.Drawing.Rectangle GetVirtualScreenBounds()
+    {
+        try
+        {
+            int x = GetSystemMetrics(SM_XVIRTUALSCREEN);
+            int y = GetSystemMetrics(SM_YVIRTUALSCREEN);
+            int w = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+            int h = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+            if (w > 0 && h > 0) return new System.Drawing.Rectangle(x, y, w, h);
+        }
+        catch { }
+        return System.Drawing.Rectangle.Empty;
+    }
+
+    [DllImport("user32.dll")]
     private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
     private const int KEYEVENTF_KEYUP = 0x0002;
