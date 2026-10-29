@@ -66,9 +66,7 @@ public sealed class OpenAIClient : IDisposable
         var skip = SkipReasoningForTranslation;
         var sys = !string.IsNullOrWhiteSpace(prompt)
             ? prompt.Trim()
-            : $"You are a professional translator. Translate the user's text into {lang}. " +
-              "Preserve the original formatting, line breaks, code blocks and Markdown. " +
-              "Output ONLY the translation, with no explanations, no quotes, no notes.";
+            : TranslateSystemPrompt(lang, forImage: false);
         if (skip) sys += NoReasoningSuffix;
         return CompleteStreamAsync(sys, text, null, ct, skip);
     }
@@ -82,12 +80,74 @@ public sealed class OpenAIClient : IDisposable
         var skip = SkipReasoningForTranslation;
         var sys = !string.IsNullOrWhiteSpace(prompt)
             ? prompt.Trim()
-            : $"You are a professional translator. The image contains text. " +
-              $"Translate ALL readable text in the image into {lang}. " +
-              "Preserve line breaks and layout as much as possible. " +
-              "Output ONLY the translation, with no explanations.";
+            : TranslateSystemPrompt(lang, forImage: true);
         if (skip) sys += NoReasoningSuffix;
         return CompleteStreamAsync(sys, "请翻译图片中的文字。", png, ct, skip);
+    }
+
+    /// <summary>
+    /// 内置翻译提示词（文本 / 图片共用）。只保留一条限制：输出必须整段是目标语言。
+    /// 原文里出现「xxxx-san」这类日语痕迹时，模型容易顺着原文改写成日文，这条规则就是把它拉回目标语言。
+    /// </summary>
+    private static string TranslateSystemPrompt(string lang, bool forImage)
+    {
+        var target = DescribeLanguage(lang);
+        var head = forImage
+            ? $"You are a professional translator. The image contains text. Translate ALL readable text in the image into {target}. "
+            : $"You are a professional translator. Translate the user's text into {target}. ";
+        return head
+            + $"The output MUST be written entirely in {target}: do not reply in the source language "
+            + $"(unless the source already is {target}), and never switch languages mid-way. "
+            + "Preserve the original formatting, line breaks, code blocks and Markdown"
+            + (forImage ? ", and the layout" : "") + ". "
+            + "Output ONLY the translation, with no explanations, no quotes, no notes.";
+    }
+
+    /// <summary>
+    /// 把界面上的语言名补全成明确的名称，避免模型把「中文」理解成日文汉字之类的歧义。
+    /// 不认识的写法原样返回（用户可以直接输入任意语言名）。
+    /// </summary>
+    private static string DescribeLanguage(string? lang)
+    {
+        var l = (lang ?? "").Trim();
+        if (l.Length == 0) return "English";
+        switch (l.ToLowerInvariant())
+        {
+            case "中文":
+            case "简体中文":
+            case "汉语":
+            case "chinese":
+            case "zh":
+            case "zh-cn":
+            case "zh-hans":
+            case "simplified chinese":
+                return "Simplified Chinese (简体中文)";
+            case "繁體中文":
+            case "繁体中文":
+            case "zh-tw":
+            case "zh-hk":
+            case "zh-hant":
+            case "traditional chinese":
+                return "Traditional Chinese (繁體中文)";
+            case "日本語":
+            case "日语":
+            case "日文":
+            case "japanese":
+            case "ja":
+                return "Japanese (日本語)";
+            case "english":
+            case "en":
+            case "英文":
+            case "英语":
+                return "English";
+            case "한국어":
+            case "韩语":
+            case "korean":
+            case "ko":
+                return "Korean (한국어)";
+            default:
+                return l;
+        }
     }
 
     // ---------- 生成回复（流式） ----------
