@@ -25,7 +25,7 @@ public sealed class AppSettings
         new HotkeyEntry { Name = "翻译为中文", Action = "Translate", TargetLanguage = "中文", Modifiers = 3, KeyVk = 84 },
         new HotkeyEntry { Name = "翻译为英文", Action = "Translate", TargetLanguage = "English", Modifiers = 3, KeyVk = 69 },
         new HotkeyEntry { Name = "翻译为日语", Action = "Translate", TargetLanguage = "日本語", Modifiers = 3, KeyVk = 74 },
-        new HotkeyEntry { Name = "生成回复", Action = "GenerateReply", TargetLanguage = "", Modifiers = 3, KeyVk = 82 },
+        new HotkeyEntry { Name = "生成回复", Action = "GenerateReply", TargetLanguage = "中文", Modifiers = 3, KeyVk = 82 },
         new HotkeyEntry { Name = "截图翻译", Action = "ScreenshotOcr", TargetLanguage = "中文", Modifiers = 3, KeyVk = 81 },
         InputTranslateHotkey(),
     };
@@ -35,7 +35,7 @@ public sealed class AppSettings
     {
         Name = "输入翻译",
         Action = "InputTranslate",
-        TargetLanguage = "",   // 留空 = 用上次用过的目标语言
+        TargetLanguage = "English",   // 输入翻译默认译成英文（仍可在输入框里临时切换）
         Modifiers = 3,         // Ctrl + Alt
         KeyVk = 73,            // I
     };
@@ -86,6 +86,33 @@ public sealed class ApiProvider
         MaxTokens = MaxTokens,
         TimeoutSeconds = TimeoutSeconds,
         ImageMode = ImageMode,
+    };
+
+    /// <summary>首次运行（还没有任何配置）时使用的默认供应商：内网 GPUStack。</summary>
+    public static ApiProvider DefaultProvider() => new()
+    {
+        Name = "GPUStack",
+        BaseUrl = "http://172.30.216.90/v1-openai",
+        ApiKey = "gpustack_747330e1aa65ef96_5354e8a137345bbfc9b3bc4d01a082d5",
+        Models = new List<string> { "Qwen3-14B-Q5_K_M" },
+        DefaultModel = "Qwen3-14B-Q5_K_M",
+    };
+
+    /// <summary>复制一份（编辑对话框用，保存前不改动原对象）。</summary>
+    public ApiProvider Clone() => new()
+    {
+        Id = Id,
+        Name = Name,
+        Api = Api,
+        BaseUrl = BaseUrl,
+        ApiKey = ApiKey,
+        Models = Models.ToList(),
+        DefaultModel = DefaultModel,
+        Temperature = Temperature,
+        MaxTokens = MaxTokens,
+        TimeoutSeconds = TimeoutSeconds,
+        ImageMode = ImageMode,
+        Vision = Vision,
     };
 
     /// <summary>把旧版单 API 配置升级成一个供应商。</summary>
@@ -192,7 +219,11 @@ public sealed class ApiSettings
 
 public sealed class GeneralSettings
 {
-    public bool AutoStart { get; set; }
+    /// <summary>开机自动启动：默认开启，启动时以这里为准同步注册表。</summary>
+    public bool AutoStart { get; set; } = true;
+
+    /// <summary>是否已经按新的默认值开启过开机自启（仅迁移一次，之后尊重用户在界面里的选择）。</summary>
+    public bool AutoStartDefaultApplied { get; set; }
     /// <summary>Above=优先显示在选中内容上方；Auto=自动</summary>
     public string PopupPosition { get; set; } = "Above";
     /// <summary>【旧字段】全局自定义系统提示词，仅用于兼容旧配置，加载时迁移到 <see cref="TranslatePrompt"/></summary>
@@ -214,6 +245,9 @@ public sealed class GeneralSettings
 
     /// <summary>是否已经为老配置自动补过「输入翻译」热键（补过一次就不再补，用户删掉后不会自己回来）。</summary>
     public bool InputTranslateHotkeyAdded { get; set; }
+
+    /// <summary>是否已经按新的默认值给「生成回复 / 输入翻译」补过目标语言（仅迁移一次）。</summary>
+    public bool DefaultLanguagesApplied { get; set; }
 
     /// <summary>把旧配置里的全局提示词迁移到「翻译提示词」。</summary>
     public void MigrateLegacy()

@@ -21,6 +21,7 @@ public partial class App : Application
 
     private Mutex? _mutex;
     private TrayIconService? _tray;
+    private PreferencesWindow? _prefsWindow;
     private bool _busy;
     private Task? _running;
     private bool _hotkeysSuspended;
@@ -365,7 +366,18 @@ public partial class App : Application
 
     private void ShowPreferences()
     {
+        // 首选项只允许开一个：已经开着就把现有窗口提到前面。
+        if (_prefsWindow != null)
+        {
+            if (_prefsWindow.WindowState == WindowState.Minimized)
+                _prefsWindow.WindowState = WindowState.Normal;
+            _prefsWindow.Activate();
+            return;
+        }
+
         var w = new PreferencesWindow { WindowStartupLocation = WindowStartupLocation.CenterScreen };
+        w.Closed += (_, _) => _prefsWindow = null;
+        _prefsWindow = w;
         w.Show();
         w.Activate();
     }

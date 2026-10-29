@@ -1,0 +1,213 @@
+<Window x:Class="SDemo.QuickTranslate.Views.ProviderEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="模型提供商 - SDemo.QuickTranslate"
+        Width="660" Height="800"
+        MinWidth="580" MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip"
+        Style="{StaticResource AppWindowStyle}">
+
+    <Grid Margin="16,14,16,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="2,0,2,10">
+            <TextBlock x:Name="HeadText" Style="{StaticResource TitleTextStyle}"/>
+            <TextBlock x:Name="SubText" Style="{StaticResource HintTextStyle}" Margin="0,4,0,0" TextWrapping="Wrap"
+                       Text="只支持标准 OpenAI 兼容接口：GET /v1/models、POST /v1/chat/completions。"/>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Padding="0,0,6,0">
+            <StackPanel>
+
+                <!-- 基本信息 -->
+                <Border Style="{StaticResource CardBorderStyle}" Padding="14,12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="基本信息" Style="{StaticResource SectionTextStyle}"/>
+
+                        <StackPanel x:Name="PresetRow" Margin="0,2,0,10">
+                            <TextBlock Text="从预设开始（可选）" Style="{StaticResource SectionTextStyle}"/>
+                            <ComboBox x:Name="PresetBox" VerticalContentAlignment="Center"
+                                      SelectionChanged="Preset_Changed"
+                                      ToolTip="选一个常用服务，自动填好名称、地址与一个可用模型"/>
+                        </StackPanel>
+
+                        <TextBlock Text="显示名称" Style="{StaticResource SectionTextStyle}"/>
+                        <TextBox x:Name="NameBox" VerticalContentAlignment="Center"
+                                 ToolTip="只用于界面显示与日志，例如 OpenAI / DeepSeek / 本地 LM Studio"/>
+
+                        <TextBlock Text="接口地址 (Base URL)" Style="{StaticResource SectionTextStyle}" Margin="0,10,0,0"/>
+                        <TextBox x:Name="BaseUrlBox" VerticalContentAlignment="Center"
+                                 ToolTip="例如 http://172.30.216.90/v1-openai；只填域名时会自动补成 https://域名/v1"/>
+                        <TextBlock Style="{StaticResource HintTextStyle}" Margin="0,5,0,0"
+                                   Text="需包含 /v1（OpenAI SDK 只会在后面拼 /chat/completions）；只填域名时保存会自动补全。"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- API Key -->
+                <Border Style="{StaticResource CardBorderStyle}" Padding="14,12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="API Key" Style="{StaticResource SectionTextStyle}"/>
+                        <PasswordBox x:Name="KeyBox" VerticalContentAlignment="Center"
+                                     ToolTip="保存后不再显示，若要更换请重新输入"/>
+                        <TextBlock x:Name="KeyHint" Style="{StaticResource HintTextStyle}" Margin="0,5,0,0" TextWrapping="Wrap"/>
+                        <CheckBox x:Name="ClearKeyBox" Content="清除已保存的 Key" Margin="0,8,0,0" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 模型目录 -->
+                <Border Style="{StaticResource CardBorderStyle}" Padding="14,12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center"
+                                       Text="模型目录" Style="{StaticResource SectionTextStyle}"/>
+                            <Button Grid.Column="1" x:Name="FetchBtn" Content="获取模型列表"
+                                    Height="28" MinWidth="118" VerticalAlignment="Top"
+                                    Style="{StaticResource AccentButtonStyle}"
+                                    ToolTip="GET {接口地址}/models 拉取可用模型"
+                                    Click="Fetch_Click"/>
+                        </Grid>
+                        <TextBlock x:Name="FetchStatus" Style="{StaticResource HintTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="196"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <Border Background="{StaticResource CardSoftBrush}"
+                                        BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8"
+                                        Padding="2">
+                                    <ListBox x:Name="ModelList" Height="84" BorderThickness="0" Background="Transparent"
+                                             VerticalContentAlignment="Top" HorizontalContentAlignment="Stretch"
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="6,2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding}" VerticalAlignment="Center" FontSize="12.5"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <Button Grid.Column="1" Content="✕" Width="24" Height="22" Padding="0"
+                                                            MinHeight="22" FontSize="12" Tag="{Binding}"
+                                                            ToolTip="从模型目录移除" Click="RemoveModel_Click"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Border>
+
+                                <Grid Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="ModelInput" Grid.Column="0" VerticalContentAlignment="Center"
+                                             Margin="0,0,8,0" KeyDown="ModelInput_KeyDown"
+                                             ToolTip="输入模型 ID（例如 Qwen3-14B-Q5_K_M），回车或点“添加”"/>
+                                    <Button Grid.Column="1" Content="添加" Width="76" Height="28" Click="AddModel_Click"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="14,0,0,0">
+                                <TextBlock Text="首选模型" Style="{StaticResource SectionTextStyle}"/>
+                                <TextBlock Style="{StaticResource HintTextStyle}" Margin="0,0,0,6"
+                                           Text="用于「测试连接」与默认模型下拉框的预选值；可选目录里的模型，也可直接输入。"/>
+                                <ComboBox x:Name="DefaultModelBox" IsEditable="True" VerticalContentAlignment="Center"
+                                          ToolTip="这个供应商的首选模型"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 高级参数（默认收起） -->
+                <Border Style="{StaticResource CardBorderStyle}" Padding="14,12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <CheckBox x:Name="AdvancedToggle" Checked="AdvancedToggle_Changed"
+                                  Unchecked="AdvancedToggle_Changed" Cursor="Hand"
+                                  Content="高级参数：温度 / 最大输出 Token / 超时 / 图片翻译方式"
+                                  ToolTip="展开后可调整这些参数；不展开则使用当前值"/>
+                        <StackPanel x:Name="AdvancedBody" Visibility="Collapsed">
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="112"/>
+                                <ColumnDefinition Width="96"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                                <TextBlock Text="温度" Style="{StaticResource SectionTextStyle}"/>
+                                <Slider x:Name="TempSlider" Minimum="0" Maximum="1.5" Value="0.3"
+                                        TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                        ValueChanged="Temp_Changed"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" x:Name="TempLabel" VerticalAlignment="Bottom"
+                                       Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold"
+                                       MinWidth="26" Margin="0,0,16,3"/>
+                            <StackPanel Grid.Column="2" Margin="0,0,12,0">
+                                <TextBlock Text="最大输出 Token" Style="{StaticResource SectionTextStyle}"/>
+                                <TextBox x:Name="MaxTokensBox" VerticalContentAlignment="Center"
+                                         ToolTip="只限制模型输出长度（max_tokens），思考过程也计入这个额度"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="3">
+                                <TextBlock Text="超时（秒）" Style="{StaticResource SectionTextStyle}"/>
+                                <TextBox x:Name="TimeoutBox" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="图片翻译方式" Style="{StaticResource SectionTextStyle}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <RadioButton Grid.Column="1" x:Name="ImgVisionRadio" GroupName="ImgMode"
+                                         VerticalAlignment="Center"
+                                         ToolTip="截图直接发给多模态模型：快、保留排版，但需要模型支持图片"
+                                         Content="发送原图给视觉模型"/>
+                            <RadioButton Grid.Column="2" x:Name="ImgOcrRadio" GroupName="ImgMode"
+                                         VerticalAlignment="Center"
+                                         ToolTip="先本地 OCR 识别文字再翻译：任意模型可用"
+                                         Content="先本地 OCR 再翻译"/>
+                        </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" Margin="2,12,2,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="0" x:Name="TestBtn" Content="测试连接" Width="96" Height="32"
+                    VerticalAlignment="Center" Click="Test_Click"/>
+            <TextBlock Grid.Column="1" x:Name="TestStatus" Style="{StaticResource HintTextStyle}"
+                       VerticalAlignment="Center" Margin="10,0,12,0" TextWrapping="Wrap"/>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Content="取消" Width="88" Height="32" IsCancel="True" Click="Cancel_Click"/>
+                <Button Content="保存" Width="96" Height="32" Margin="10,0,0,0"
+                        Style="{StaticResource AccentButtonStyle}" IsDefault="True" Click="Save_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

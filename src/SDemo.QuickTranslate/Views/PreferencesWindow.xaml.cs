@@ -10,37 +10,33 @@ namespace SDemo.QuickTranslate.Views;
 public partial class PreferencesWindow : Window
 {
     private readonly List<HotkeyRow> _rows = new();
-    private CancellationTokenSource? _modelCts;
 
     /// <summary>正在把设置写进控件（或控件回写设置）时为 true，避免控件事件彼此覆盖。</summary>
     private bool _loading;
-    private string? _currentProviderId;
 
-    /// <summary>「添加 API」的常用预设（名称 / 地址 / 常用模型）。</summary>
-    private static readonly (string Name, string BaseUrl, string Model)[] Presets =
+    private sealed record SectionInfo(string Title, string Summary);
+
+    private static readonly Dictionary<string, SectionInfo> Sections = new()
     {
-        ("OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"),
-        ("DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"),
-        ("通义千问 DashScope", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
-        ("智谱 GLM", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
-        ("本地 Ollama", "http://127.0.0.1:11434/v1", "qwen2.5:7b"),
-        ("本地 LM Studio", "http://127.0.0.1:1234/v1", ""),
+        ["hotkeys"] = new("热键",
+            "全局热键：按一下就能翻译选中内容、生成回复、截图翻译或输入翻译。每条热键都可以单独指定语言、提示词和模型。"),
+        ["models"] = new("模型",
+            "配置 OpenAI 兼容的模型提供商，并选择所有请求默认使用的模型；单条热键也可以单独指定模型。"),
+        ["general"] = new("通用",
+            "开机启动、翻译时是否关闭思考，以及译文浮窗出现的位置。"),
+        ["prompts"] = new("提示词",
+            "翻译、生成回复、截图翻译的默认系统提示词；单条热键设置的提示词会覆盖这里。"),
     };
 
     public PreferencesWindow() : this(null) { }
 
-    /// <param name="initialTab">"models" = 直接打开「模型」页（调试/截图用）。</param>
-    public PreferencesWindow(string? initialTab)
+    /// <param name="initialSection">"models" / "general" / "prompts" = 直接打开对应分区（调试/截图用）。</param>
+    public PreferencesWindow(string? initialSection)
     {
         InitializeComponent();
         LoadSettingsIntoUi();
-        if (string.Equals(initialTab, "models", StringComparison.OrdinalIgnoreCase))
-            MainTabs.SelectedItem = ModelsTab;
-        Closed += (_, _) =>
-        {
-            _modelCts?.Cancel();
-            App.ResumeHotkeys();   // 关闭后恢复全局热键
-        };
+        SelectSection(initialSection);
+        Closed += (_, _) => App.ResumeHotkeys();   // 关闭后恢复全局热键
         // 打开首选项期间暂停全局热键，否则录入热键时会触发已有热键（冲突）
         App.SuspendHotkeys();
     }
@@ -51,6 +47,42 @@ public partial class PreferencesWindow : Window
         var prev = _loading;
         _loading = true;
         try { a(); } finally { _loading = prev; }
+    }
+
+    // ---------- 分区导航 ----------
+
+    private void SelectSection(string? section)
+    {
+        var name = section?.Trim().ToLowerInvariant();
+        var nav =
+            name == "models" ? NavModels :
+            name == "general" ? NavGeneral :
+            name == "prompts" ? NavPrompts :
+            NavHotkeys;
+        if (nav.IsChecked != true) nav.IsChecked = true;
+        else ShowSection(NavTag(nav));
+    }
+
+    private static string NavTag(RadioButton nav) => nav.Tag as string ?? "hotkeys";
+
+    private void Nav_Checked(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton nav) ShowSection(NavTag(nav));
+    }
+
+    private void ShowSection(string section)
+    {
+        if (!Sections.TryGetValue(section, out var info)) section = "hotkeys";
+        if (!Sections.TryGetValue(section, out info)) return;
+        var s = Sections[section];
+
+        HotkeysSection.Visibility = section == "hotkeys" ? Visibility.Visible : Visibility.Collapsed;
+        ModelsSection.Visibility = section == "models" ? Visibility.Visible : Visibility.Collapsed;
+        GeneralSection.Visibility = section == "general" ? Visibility.Visible : Visibility.Collapsed;
+        PromptsSection.Visibility = section == "prompts" ? Visibility.Visible : Visibility.Collapsed;
+
+        SectionTitle.Text = s.Title;
+        SectionSummary.Text = s.Summary;
     }
 
     // ---------- 加载 ----------
@@ -69,8 +101,9 @@ public partial class PreferencesWindow : Window
         _loading = true;
         try
         {
-            RefreshProviderList(s.DefaultModel.ProviderId);
-                HotkeysPanel.Children.Clear();
+            RefreshProviderCards();
+            PopulateDefaultModelRow();
+            HotkeysPanel.Children.Clear();
             _rows.Clear();
             foreach (var h in s.Hotkeys) AddRow(h);
             if (_rows.Count == 0) AddRow(new HotkeyEntry());
@@ -78,167 +111,94 @@ public partial class PreferencesWindow : Window
         finally { _loading = false; }
     }
 
-    // ---------- API 列表（左） ----------
+    // ---------- 模型提供商（卡片列表） ----------
 
-    private sealed class ProviderItem
+    private void RefreshProviderCards()
     {
-        public ApiProvider Provider { get; }
-        public ProviderItem(ApiProvider p) => Provider = p;
-
-        public override string ToString()
-        {
-            var name = string.IsNullOrWhiteSpace(Provider.Name) ? "(未命名 API)" : Provider.Name;
-            var model = string.IsNullOrWhiteSpace(Provider.DefaultModel) ? "未设置模型" : Provider.DefaultModel;
-            return $"{name}\n{model}";
-        }
-    }
-
-    private ApiProvider? SelectedProvider => (ProviderList.SelectedItem as ProviderItem)?.Provider;
-
-    private void RefreshProviderList(string? selectId)
-    {
-        Quiet(() =>
-        {
-            ProviderList.Items.Clear();
-            foreach (var p in App.Settings.Providers) ProviderList.Items.Add(new ProviderItem(p));
-
-            int idx = 0;
-            var target = selectId ?? _currentProviderId;
-            if (ProviderList.Items.Count > 0 && !string.IsNullOrWhiteSpace(target))
-            {
-                for (int i = 0; i < ProviderList.Items.Count; i++)
-                    if (((ProviderItem)ProviderList.Items[i]).Provider.Id == target) { idx = i; break; }
-                ProviderList.SelectedIndex = idx;
-            }
-            LoadProviderDetail();
-        });
-        PopulateDefaultModelRow();
-    }
-
-    private void ProviderList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_loading) return;
-        LoadProviderDetail();
-    }
-
-    private void LoadProviderDetail()
-    {
-        var p = SelectedProvider;
-        ProviderDetailPanel.IsEnabled = p != null;
-        DelProviderBtn.IsEnabled = p != null;
-        if (p == null)
-        {
-            _currentProviderId = null;
-            return;
-        }
-
-        _currentProviderId = p.Id;
-        Quiet(() =>
-        {
-            ProviderNameBox.Text = p.Name;
-            ProviderBaseUrlBox.Text = p.BaseUrl;
-            ProviderKeyBox.Password = p.ApiKey;
-            ProviderKeyText.Text = p.ApiKey;
-            ProviderTempSlider.Value = Math.Clamp(p.Temperature, 0, 1.5);
-            ProviderTempLabel.Text = p.Temperature.ToString("0.0");
-            ProviderMaxTokensBox.Text = p.MaxTokens.ToString();
-            ProviderTimeoutBox.Text = p.TimeoutSeconds.ToString();
-            ProviderModelBox.Items.Clear();
-            foreach (var m in p.ModelCandidates()) ProviderModelBox.Items.Add(m);
-            ProviderModelBox.Text = p.DefaultModel;
-            ProviderImgVisionRadio.IsChecked = p.ImageMode != "Ocr";
-            ProviderImgOcrRadio.IsChecked = p.ImageMode == "Ocr";
-            ProviderModelStatus.Text = "点「获取模型列表」可从接口拉取模型名（需先填好接口地址与 API Key），也可以直接在「常用模型」里手动输入。";
-            ProviderModelStatus.Foreground = ThemeBrush("SubtleTextBrush", Color.FromRgb(0x6E, 0x8C, 0xAD));
-            TestStatus.Text = "";
-        });
-    }
-
-    /// <summary>把详情区控件的当前值写回选中的 API（编辑即生效，切换 API / 保存都不会丢）。</summary>
-    private void CommitProviderDetail()
-    {
-        if (_loading) return;
-        var p = SelectedProvider;
-        if (p == null) return;
-
-        p.Name = ProviderNameBox.Text.Trim();
-        p.BaseUrl = ProviderBaseUrlBox.Text.Trim();
-        p.ApiKey = ShowProviderKeyCheck.IsChecked == true ? ProviderKeyText.Text : ProviderKeyBox.Password;
-        p.Temperature = Math.Round(ProviderTempSlider.Value, 2);
-        if (int.TryParse(ProviderMaxTokensBox.Text, out var mt)) p.MaxTokens = Math.Clamp(mt, 1, 32768);
-        if (int.TryParse(ProviderTimeoutBox.Text, out var to)) p.TimeoutSeconds = Math.Clamp(to, 5, 600);
-        p.DefaultModel = ProviderModelBox.Text.Trim();
-        if (ProviderImgOcrRadio.IsChecked == true) p.ImageMode = "Ocr";
-        else if (ProviderImgVisionRadio.IsChecked == true) p.ImageMode = "Vision";
-
-        ProviderList.Items.Refresh();
-        PopulateDefaultModelRow();
-    }
-
-    private void ProviderField_Changed(object sender, RoutedEventArgs e) => CommitProviderDetail();
-
-    private void ProviderTemp_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        // XAML 里 Slider 的初始 Value 会触发一次：那时后面的控件还没建好，必须判空
-        if (ProviderTempLabel != null) ProviderTempLabel.Text = ProviderTempSlider.Value.ToString("0.0");
-        CommitProviderDetail();
-    }
-
-    private void ShowProviderKey_Changed(object sender, RoutedEventArgs e)
-    {
-        if (ShowProviderKeyCheck.IsChecked == true)
-        {
-            ProviderKeyText.Text = ProviderKeyBox.Password;
-            ProviderKeyBox.Visibility = Visibility.Collapsed;
-            ProviderKeyText.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            ProviderKeyBox.Password = ProviderKeyText.Text;
-            ProviderKeyBox.Visibility = Visibility.Visible;
-            ProviderKeyText.Visibility = Visibility.Collapsed;
-        }
-        CommitProviderDetail();
+        ProviderCards.ItemsSource = App.Settings.Providers.Select(p => new ProviderCardItem(p)).ToList();
+        ProviderEmpty.Visibility = App.Settings.Providers.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void AddProvider_Click(object sender, RoutedEventArgs e)
     {
-        var menu = new ContextMenu { PlacementTarget = AddProviderBtn, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
-        foreach (var preset in Presets)
-        {
-            var item = new MenuItem { Header = preset.Name + (preset.Model.Length > 0 ? $"（{preset.Model}）" : "") };
-            item.Click += (_, _) => AddProvider(preset.Name, preset.BaseUrl, preset.Model);
-            menu.Items.Add(item);
-        }
-        menu.Items.Add(new Separator());
-        var blank = new MenuItem { Header = "空白 API…" };
-        blank.Click += (_, _) => AddProvider("", "", "");
-        menu.Items.Add(blank);
-        menu.IsOpen = true;
+        var added = ProviderEditorWindow.Edit(this, null, NextProviderName());
+        if (added == null) return;
+
+        App.Settings.Providers.Add(added);
+        RefreshProviderCards();
+        PopulateDefaultModelRow();
+        EnsureDefaultModel();
     }
 
-    private void AddProvider(string name, string baseUrl, string model)
+    private void EditProvider_Click(object sender, RoutedEventArgs e)
     {
-        // 参数（温度 / 最大输出 Token / 超时 / 图片翻译方式）沿用当前选中的 API；API Key 不复制
-        var src = SelectedProvider ?? App.Settings.Providers.FirstOrDefault();
-        var p = new ApiProvider
-        {
-            Name = string.IsNullOrWhiteSpace(name) ? NextProviderName() : name,
-            BaseUrl = string.IsNullOrWhiteSpace(baseUrl) ? (src?.BaseUrl ?? "https://api.openai.com/v1") : baseUrl,
-            ApiKey = "",
-            Temperature = src?.Temperature ?? 0.3,
-            MaxTokens = src?.MaxTokens ?? 2048,
-            TimeoutSeconds = src?.TimeoutSeconds ?? 60,
-            ImageMode = src?.ImageMode ?? "Vision",
-            DefaultModel = model,
-        };
-        if (!string.IsNullOrWhiteSpace(model)) p.Models.Add(model);
+        if (sender is not Button { Tag: ProviderCardItem item }) return;
+        var p = item.Provider;
 
-        App.Settings.Providers.Add(p);
-        RefreshProviderList(p.Id);
-        ProviderNameBox.Focus();
-        ProviderNameBox.SelectAll();
-        SetProviderStatus($"已添加「{p.Name}」，请填写 API Key（若需要）并点「获取模型列表」。", ok: true);
+        var edited = ProviderEditorWindow.Edit(this, p);
+        if (edited == null) return;
+
+        // 就地替换（Id 保持不变，默认模型 / 热键对该提供商的引用不会断）
+        int idx = App.Settings.Providers.IndexOf(p);
+        if (idx >= 0) App.Settings.Providers[idx] = edited;
+        else App.Settings.Providers.Add(edited);
+
+        // 模型被删 / 改名后，把指向旧模型的地方改到这个提供商的可用模型
+        FixModelReferences(edited);
+        RefreshProviderCards();
+        PopulateDefaultModelRow();
+        EnsureDefaultModel();
+        RefreshHotkeyModelButtons();
+    }
+
+    private void RemoveProvider_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ProviderCardItem item }) return;
+        var p = item.Provider;
+
+        int refs = CountReferences(p.Id);
+        var msg = $"确定移除模型提供商「{p.Name}」吗？" +
+                  (refs > 0
+                      ? $"\n\n默认模型 / 热键模型 里共有 {refs} 处引用了它，移除后这些引用会一并清空（改用下一级，通常就是默认模型）。"
+                      : "");
+        if (MessageBox.Show(msg, "SDemo.QuickTranslate", MessageBoxButton.OKCancel, MessageBoxImage.Warning)
+            != MessageBoxResult.OK)
+            return;
+
+        App.Settings.Providers.Remove(p);
+        ClearReferences(p.Id);
+        RefreshProviderCards();
+        PopulateDefaultModelRow();
+        EnsureDefaultModel();
+        RefreshHotkeyModelButtons();
+    }
+
+    /// <summary>提供商的模型变化后，修正默认模型 / 热键里已不存在的模型名。</summary>
+    private static void FixModelReferences(ApiProvider p)
+    {
+        var candidates = p.ModelCandidates();
+        string Fix(string model)
+            => candidates.Contains(model, StringComparer.OrdinalIgnoreCase)
+                ? model
+                : (candidates.FirstOrDefault() ?? "");
+
+        if (App.Settings.DefaultModel.ProviderId == p.Id)
+            App.Settings.DefaultModel.Model = Fix(App.Settings.DefaultModel.Model);
+        foreach (var h in App.Settings.Hotkeys)
+            if (h.Model != null && h.Model.ProviderId == p.Id)
+                h.Model.Model = Fix(h.Model.Model);
+    }
+
+    private static void EnsureDefaultModel()
+    {
+        if (App.Settings.DefaultModel.IsSet) return;
+        var p = App.Settings.Providers.FirstOrDefault(x => x.ModelCandidates().Count > 0)
+                ?? App.Settings.Providers.FirstOrDefault();
+        if (p == null) return;
+        App.Settings.DefaultModel.ProviderId = p.Id;
+        App.Settings.DefaultModel.Model = p.DefaultModel.Length > 0
+            ? p.DefaultModel
+            : (p.ModelCandidates().FirstOrDefault() ?? "");
     }
 
     private string NextProviderName()
@@ -249,26 +209,6 @@ public partial class PreferencesWindow : Window
             if (!App.Settings.Providers.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
                 return name;
         }
-    }
-
-    private void DeleteProvider_Click(object sender, RoutedEventArgs e)
-    {
-        var p = SelectedProvider;
-        if (p == null) return;
-
-        int refs = CountReferences(p.Id);
-        var msg = $"确定删除 API「{p.Name}」吗？" +
-                  (refs > 0
-                      ? $"\n\n默认模型 / 热键模型 里共有 {refs} 处引用了它，删除后这些引用会一并清空（改用下一级，通常就是默认模型）。"
-                      : "");
-        if (MessageBox.Show(msg, "SDemo.QuickTranslate", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
-            return;
-
-        App.Settings.Providers.Remove(p);
-        ClearReferences(p.Id);
-        _currentProviderId = null;
-        RefreshProviderList(App.Settings.Providers.FirstOrDefault()?.Id);
-        RefreshHotkeyModelButtons();
     }
 
     private int CountReferences(string providerId)
@@ -287,14 +227,20 @@ public partial class PreferencesWindow : Window
             if (h.Model != null && string.Equals(h.Model.ProviderId, providerId, StringComparison.Ordinal)) h.Model.Clear();
     }
 
-    private void SetProviderStatus(string text, bool warn = false, bool ok = false)
-    {
-        ProviderModelStatus.Text = text;
-        var key = warn ? "WarnTextBrush" : ok ? "OkTextBrush" : "SubtleTextBrush";
-        ProviderModelStatus.Foreground = ThemeBrush(key, Color.FromRgb(0x6E, 0x8C, 0xAD));
-    }
-
     // ---------- 默认模型 ----------
+
+    private sealed class ProviderItem
+    {
+        public ApiProvider Provider { get; }
+        public ProviderItem(ApiProvider p) => Provider = p;
+
+        public override string ToString()
+        {
+            var name = string.IsNullOrWhiteSpace(Provider.Name) ? "(未命名 API)" : Provider.Name;
+            var model = string.IsNullOrWhiteSpace(Provider.DefaultModel) ? "未设置模型" : Provider.DefaultModel;
+            return $"{name}\n{model}";
+        }
+    }
 
     private void PopulateDefaultModelRow()
     {
@@ -330,13 +276,13 @@ public partial class PreferencesWindow : Window
         var p = (DefaultApiBox.SelectedItem as ProviderItem)?.Provider;
         if (p == null)
         {
-            DefaultModelHint.Text = "还没有 API：请先在左侧「＋ 添加」。";
+            DefaultModelHint.Text = "还没有提供商：请点下方「＋ 添加模型提供商」。";
             return;
         }
         var m = DefaultModelBox.Text.Trim();
         DefaultModelHint.Text = m.Length == 0
             ? "请选择或输入模型名"
-            : $"所有没单独指定模型的请求都会用 {p.Name} / {m}";
+            : $"当前生效：{p.Name} / {m}";
     }
 
     private void DefaultApi_Changed(object sender, SelectionChangedEventArgs e)
@@ -344,7 +290,7 @@ public partial class PreferencesWindow : Window
         if (_loading) return;
         var p = (DefaultApiBox.SelectedItem as ProviderItem)?.Provider;
         App.Settings.DefaultModel.ProviderId = p?.Id ?? "";
-        // 换了 API，模型也要跟着换成新 API 下的（优先它的常用模型）
+        // 换了提供商，模型也要跟着换成新提供商下的（优先它的常用模型）
         var keep = App.Settings.DefaultModel.Model;
         var candidates = p?.ModelCandidates() ?? new List<string>();
         if (!candidates.Contains(keep, StringComparer.OrdinalIgnoreCase))
@@ -364,7 +310,7 @@ public partial class PreferencesWindow : Window
         {
             App.Settings.DefaultModel.Model = s;
             UpdateDefaultModelHint();
-            }
+        }
     }
 
     private void DefaultModel_LostFocus(object sender, RoutedEventArgs e)
@@ -372,96 +318,6 @@ public partial class PreferencesWindow : Window
         if (_loading) return;
         App.Settings.DefaultModel.Model = DefaultModelBox.Text.Trim();
         UpdateDefaultModelHint();
-    }
-
-    // ---------- 获取模型列表 ----------
-
-    private async void FetchModels_Click(object sender, RoutedEventArgs e)
-    {
-        var p = SelectedProvider;
-        if (p == null) return;
-        CommitProviderDetail();
-
-        if (string.IsNullOrWhiteSpace(p.BaseUrl))
-        {
-            SetProviderStatus("请先填写接口地址 (Base URL)。", warn: true);
-            ProviderBaseUrlBox.Focus();
-            return;
-        }
-
-        _modelCts?.Cancel();
-        _modelCts = new CancellationTokenSource();
-        var ct = _modelCts.Token;
-
-        FetchModelsBtn.IsEnabled = false;
-        var oldContent = FetchModelsBtn.Content;
-        FetchModelsBtn.Content = "获取中…";
-        SetProviderStatus("正在从接口获取模型列表…");
-
-        try
-        {
-            var models = await new OpenAIClient(p.ToApiSettings(p.DefaultModel)).ListModelsAsync(ct);
-            if (ct.IsCancellationRequested) return;
-            if (models.Count == 0)
-            {
-                SetProviderStatus("接口没有返回任何模型，可手动输入模型名。", warn: true);
-                return;
-            }
-
-            p.Models = models;
-            if (string.IsNullOrWhiteSpace(p.DefaultModel) || !models.Contains(p.DefaultModel, StringComparer.OrdinalIgnoreCase))
-                p.DefaultModel = models[0];
-
-            Quiet(() =>
-            {
-                ProviderModelBox.Items.Clear();
-                foreach (var m in p.ModelCandidates()) ProviderModelBox.Items.Add(m);
-                ProviderModelBox.Text = p.DefaultModel;
-            });
-            PopulateDefaultModelRow();
-                App.SettingsService.Save(App.Settings);   // 立刻落盘，避免忘记保存而丢列表
-            SetProviderStatus($"获取成功：共 {models.Count} 个模型，已填入「常用模型」下拉框。", ok: true);
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            SetProviderStatus("获取失败：" + ex.Message, warn: true);
-            Log.Error(ex);
-        }
-        finally
-        {
-            FetchModelsBtn.Content = oldContent;
-            FetchModelsBtn.IsEnabled = true;
-        }
-    }
-
-    // ---------- 测试连接 ----------
-
-    private async void Test_Click(object sender, RoutedEventArgs e)
-    {
-        var p = SelectedProvider;
-        if (p == null) return;
-        CommitProviderDetail();
-
-        var model = ProviderModelBox.Text.Trim();
-        if (model.Length == 0)
-        {
-            TestStatus.Text = "请先填写「常用模型」（或点「获取模型列表」）。";
-            return;
-        }
-
-        TestBtn.IsEnabled = false;
-        TestStatus.Text = "测试中…";
-        try
-        {
-            var client = new OpenAIClient(p.ToApiSettings(model));
-            TestStatus.Text = await client.TestAsync();
-        }
-        catch (Exception ex)
-        {
-            TestStatus.Text = "失败：" + ex.Message;
-        }
-        finally { TestBtn.IsEnabled = true; }
     }
 
     // ---------- 热键 ----------
@@ -492,30 +348,29 @@ public partial class PreferencesWindow : Window
     {
         var s = App.Settings;
 
-        // 模型页：编辑即写回，这里只做一次兜底同步（编辑框里的文字）
-        CommitProviderDetail();
+        // 默认模型编辑框里的文字（模型页编辑即写回，这里只做兜底）
         s.DefaultModel.Model = DefaultModelBox.Text.Trim();
         foreach (var r in _rows) r.Commit();
 
         if (s.Providers.Count == 0)
         {
-            MessageBox.Show("请至少添加一个 API（首选项 → 模型）。", "SDemo.QuickTranslate",
+            MessageBox.Show("请至少添加一个模型提供商（首选项 → 模型）。", "SDemo.QuickTranslate",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
-            MainTabs.SelectedItem = ModelsTab;
+            SelectSection("models");
             return;
         }
         if (!s.DefaultModel.IsSet)
         {
-            MessageBox.Show("请设置「默认模型」（首选项 → 模型）：选择 API 与模型后再保存。", "SDemo.QuickTranslate",
+            MessageBox.Show("请设置「默认模型」（首选项 → 模型）：选择提供商与模型后再保存。", "SDemo.QuickTranslate",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
-            MainTabs.SelectedItem = ModelsTab;
+            SelectSection("models");
             return;
         }
         if (s.Providers.Any(p => string.IsNullOrWhiteSpace(p.BaseUrl)))
         {
-            MessageBox.Show("有一个 API 没填接口地址，请补全后再保存。", "SDemo.QuickTranslate",
+            MessageBox.Show("有一个模型提供商没填接口地址，请补全后再保存。", "SDemo.QuickTranslate",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
-            MainTabs.SelectedItem = ModelsTab;
+            SelectSection("models");
             return;
         }
 
@@ -562,6 +417,31 @@ public partial class PreferencesWindow : Window
     /// <summary>取主题画刷，取不到时用兜底色，保证代码构建的控件也有统一外观。</summary>
     internal static Brush ThemeBrush(string key, Color fallback)
         => System.Windows.Application.Current?.TryFindResource(key) as Brush ?? new SolidColorBrush(fallback);
+}
+
+/// <summary>模型提供商卡片的数据（只用于绑定显示）。</summary>
+internal sealed class ProviderCardItem
+{
+    public ApiProvider Provider { get; }
+    public ProviderCardItem(ApiProvider provider) => Provider = provider;
+
+    public string Name => string.IsNullOrWhiteSpace(Provider.Name) ? "(未命名提供商)" : Provider.Name;
+
+    public string ShortId => Provider.Id.Length <= 8 ? Provider.Id : Provider.Id[..8];
+
+    public string BaseUrl => string.IsNullOrWhiteSpace(Provider.BaseUrl) ? "（未填写接口地址）" : Provider.BaseUrl;
+
+    public string ModelsText
+    {
+        get
+        {
+            var candidates = Provider.ModelCandidates();
+            if (candidates.Count == 0) return "还没有模型，点「编辑」添加";
+            var head = string.Join("、", candidates.Take(3));
+            var more = candidates.Count > 3 ? "…" : "";
+            return $"{candidates.Count} 个模型 · {head}{more}";
+        }
+    }
 }
 
 

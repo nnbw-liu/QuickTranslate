@@ -43,6 +43,7 @@
     <Style x:Key="AppWindowStyle" TargetType="Window">
         <Setter Property="Background" Value="{StaticResource WindowBgBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="Icon" Value="pack://application:,,,/app.ico"/>
         <Setter Property="FontFamily" Value="Microsoft YaHei UI"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="SnapsToDevicePixels" Value="True"/>
