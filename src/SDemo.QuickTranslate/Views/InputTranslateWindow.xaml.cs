@@ -234,6 +234,8 @@ public partial class InputTranslateWindow : Window, IStreamSink
         Busy.Visibility = Visibility.Visible;
         ResultText.Text = "";
         ReasoningText.Text = "";
+        ReasoningPanel.IsExpanded = true;
+        ReasoningHeader.Text = "思考过程（实时）";
         ReasoningPanel.Visibility = Visibility.Collapsed;
         ResultText.Margin = new Thickness(0);
         ClearNotice();
@@ -249,6 +251,7 @@ public partial class InputTranslateWindow : Window, IStreamSink
     {
         _streaming = false;
         Busy.Visibility = Visibility.Collapsed;
+        ReasoningHeader.Text = "思考过程";   // 流结束，去掉「（实时）」
         TranslateBtn.Content = TranslateButtonText;
         TranslateBtn.ToolTip = "翻译输入的内容（Ctrl+Enter）";
         CopyBtn.IsEnabled = ResultLength > 0;
@@ -268,6 +271,8 @@ public partial class InputTranslateWindow : Window, IStreamSink
         ResultText.Text = "";
         ReasoningText.Text = "";
         ReasoningPanel.Visibility = Visibility.Collapsed;
+        ReasoningPanel.IsExpanded = true;
+        ReasoningHeader.Text = "思考过程（实时）";
         ResultText.Margin = new Thickness(0);
         ClearNotice();
         StatusText.Text = "";

@@ -100,13 +100,19 @@
                                  FontSize="12" Margin="0,6,0,0" IsReadOnly="True" IsReadOnlyCaretVisible="False"
                                  Padding="0" BorderThickness="0" Background="Transparent" VerticalScrollBarVisibility="Disabled"/>
                     </Expander>
-                    <StackPanel x:Name="ReasoningPanel" Visibility="Collapsed" Margin="0,8,0,0">
-                        <TextBlock Text="思考过程（实时）" FontSize="11" FontWeight="SemiBold" Foreground="#9BB2CB"/>
+                    <!-- 思考过程：只有模型真的吐了思考增量才显示（否则整块隐藏，不占位、不留空标题）；
+                         有内容时点标题左侧箭头即可收起。 -->
+                    <Expander x:Name="ReasoningPanel" Visibility="Collapsed" Margin="0,8,0,0"
+                              IsExpanded="True" Foreground="#9BB2CB">
+                        <Expander.Header>
+                            <TextBlock x:Name="ReasoningHeader" Text="思考过程（实时）"
+                                       FontSize="11" FontWeight="SemiBold" Foreground="#9BB2CB"/>
+                        </Expander.Header>
                         <TextBox x:Name="ReasoningText" TextWrapping="Wrap" FontSize="12" Foreground="#7C8A9B"
                                  Margin="0,4,0,0" IsReadOnly="True" IsReadOnlyCaretVisible="False"
                                  Padding="0" BorderThickness="0" Background="Transparent"
                                  VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled"/>
-                    </StackPanel>
+                    </Expander>
                     <TextBox x:Name="ResultText" TextWrapping="Wrap" FontSize="13.5"
                              Foreground="#111827" Margin="0,4,0,0" IsReadOnly="True" IsReadOnlyCaretVisible="False"
                              Padding="0" BorderThickness="0" Background="Transparent"

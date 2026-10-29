@@ -181,6 +181,8 @@ public partial class PopupWindow : Window, IStreamSink
         StatusText.Text = "正在生成…";
         Busy.Visibility = Visibility.Visible;
         ResultText.Text = "";
+        ReasoningPanel.IsExpanded = true;
+        ReasoningHeader.Text = "思考过程（实时）";
         ReasoningPanel.Visibility = Visibility.Collapsed;
         ReasoningText.Text = "";
         ResultText.Margin = new Thickness(0, 4, 0, 0);
@@ -217,6 +219,7 @@ public partial class PopupWindow : Window, IStreamSink
         Entry = entry;
         IsStreaming = false;
         Busy.Visibility = Visibility.Collapsed;
+        ReasoningHeader.Text = "思考过程";   // 不再实时增涨了，去掉「（实时）」
         // 有提示条时保留当前状态文案（例如「模型只输出了思考过程」），否则恢复为热键名；
         // 否则 SetStatus 写的说明会被这里覆盖掉，用户什么也看不到。
         if (!HasNotice) StatusText.Text = entry.Name;
@@ -234,6 +237,8 @@ public partial class PopupWindow : Window, IStreamSink
         ResultText.Text = "";
         ReasoningText.Text = "";
         ReasoningPanel.Visibility = Visibility.Collapsed;
+        ReasoningPanel.IsExpanded = true;
+        ReasoningHeader.Text = "思考过程（实时）";
         ResultText.Margin = new Thickness(0, 4, 0, 0);
         ClearNotice();
     }
