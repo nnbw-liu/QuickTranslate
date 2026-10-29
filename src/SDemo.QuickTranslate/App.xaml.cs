@@ -65,7 +65,7 @@ public partial class App : Application
 
         // 自检模式（--selftest）：不开界面、不占托盘，直接把一段文字走一遍流式翻译/生成回复，
         // 把「关闭思考参数是否生效、思考/正文是否真的流式、最大输出 Token 是否被截断」写进日志。
-        // 例：SDemo.QuickTranslate.exe --selftest --text="Hello" --to=中文 --tokens=64 [--think] [--reply]
+        // 例：QuickTranslate.exe --selftest --text="Hello" --to=中文 --tokens=64 [--think] [--reply]
         if (e.Args.Any(a => a.Equals("--selftest", StringComparison.OrdinalIgnoreCase)))
         {
             _ = RunSelfTestAsync(e.Args);
@@ -452,9 +452,11 @@ public partial class App : Application
                 @"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
             if (key == null) return;
             if (enable)
-                key.SetValue("SDemo.QuickTranslate", $"\"{Environment.ProcessPath}\"");
+                key.SetValue("QuickTranslate", $"\"{Environment.ProcessPath}\"");
             else
-                key.DeleteValue("SDemo.QuickTranslate", throwOnMissingValue: false);
+                key.DeleteValue("QuickTranslate", throwOnMissingValue: false);
+            // 清掉旧的可执行文件名时期留下的启动项
+            key.DeleteValue("SDemo.QuickTranslate", throwOnMissingValue: false);
         }
         catch (Exception ex)
         {

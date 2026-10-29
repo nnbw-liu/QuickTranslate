@@ -7,11 +7,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>SDemo.QuickTranslate</AssemblyName>
-    <!-- 命名空间统一加 SDemo 前缀：SDemo.QuickTranslate / .Models / .Services / .Views / .Native
-         项目名 / 程序集名 / 可执行文件名同为 SDemo.QuickTranslate -->
+    <AssemblyName>QuickTranslate</AssemblyName>
+    <!-- 命名空间统一加 SDemo 前缀：SDemo.QuickTranslate / .Models / .Services / .Views / .Native。
+         项目名仍是 SDemo.QuickTranslate，可执行文件名（AssemblyName）为 QuickTranslate.exe -->
     <RootNamespace>SDemo.QuickTranslate</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
     <Version>0.1.0</Version>
     <!-- 署名 / 文件属性统一为 SDemo（Windows「属性 → 详细信息」里的公司、版权） -->

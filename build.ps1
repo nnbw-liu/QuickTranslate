@@ -65,6 +65,12 @@ Write-Host '==> [4/4] 复制原生库与图标' -ForegroundColor Cyan
 Copy-Item $nativeDll $out -Force
 Copy-Item (Join-Path $root 'assets\app.ico') $out -Force
 
+# 清掉改名前的旧可执行文件/程序集，避免 dist 里同时躺着两个 exe
+foreach ($stale in 'SDemo.QuickTranslate.exe', 'SDemo.QuickTranslate.dll', 'SDemo.QuickTranslate.pdb', 'SDemo.QuickTranslate.deps.json', 'SDemo.QuickTranslate.runtimeconfig.json') {
+    $path = Join-Path $out $stale
+    if (Test-Path $path) { Remove-Item $path -Force -ErrorAction SilentlyContinue }
+}
+
 Write-Host ''
 Write-Host "构建完成 -> $out" -ForegroundColor Green
-Write-Host '运行: 双击 SDemo.QuickTranslate.exe；配置: 右键托盘图标 -> 首选项'
+Write-Host '运行: 双击 QuickTranslate.exe；配置: 右键托盘图标 -> 首选项'
