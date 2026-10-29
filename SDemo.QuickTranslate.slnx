@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="src\SDemo.QuickTranslate\SDemo.QuickTranslate.csproj" />
+  <Project Path="src\SDemo.NativeCore\SDemo.NativeCore.vcxproj" Id="8c0a1b2c-3d4e-4f5a-9b8c-7a6b5c4d3e2f" />
+</Solution>

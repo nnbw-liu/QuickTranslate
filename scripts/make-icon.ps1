@@ -1,4 +1,4 @@
-# make-icon.ps1 - 生成 QuickTranslate 的托盘/应用图标 (app.ico)
+# make-icon.ps1 - 生成 SDemo.QuickTranslate 的托盘/应用图标 (app.ico)
 param([string]$OutPath = (Join-Path $PSScriptRoot '..\assets\app.ico'))
 
 Add-Type -AssemblyName System.Drawing

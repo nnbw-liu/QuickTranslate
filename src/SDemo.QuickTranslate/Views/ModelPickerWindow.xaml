@@ -1,0 +1,66 @@
+<Window x:Class="SDemo.QuickTranslate.Views.ModelPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="模型 - SDemo.QuickTranslate"
+        Width="560" MinWidth="460" MinHeight="340" MaxHeight="640"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Style="{StaticResource AppWindowStyle}">
+
+    <Grid Margin="16,14,16,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="2,0,2,10">
+            <TextBlock x:Name="HeadText" Style="{StaticResource TitleTextStyle}"/>
+            <TextBlock x:Name="SubText" Style="{StaticResource HintTextStyle}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- 内容放在滚动条里：内容再高也不会被按钮盖住 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Padding="0,0,6,0">
+            <StackPanel>
+                <RadioButton x:Name="FollowRadio" GroupName="ModelMode" Content="跟随默认模型（推荐）"
+                             Checked="FollowRadio_Checked"/>
+                <TextBlock x:Name="FollowHint" Style="{StaticResource HintTextStyle}" Margin="22,4,0,0" TextWrapping="Wrap"/>
+
+                <RadioButton x:Name="PickRadio" GroupName="ModelMode" Content="单独指定 API 与模型（本热键专用）" Margin="0,14,0,0"
+                             Checked="PickRadio_Checked"/>
+
+                <StackPanel x:Name="PickPanel" Margin="22,10,0,0" IsEnabled="False">
+                    <!-- API 与模型并排，避免纵向被挤掉 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="API" Style="{StaticResource SectionTextStyle}"/>
+                            <ComboBox x:Name="ApiBox" SelectionChanged="ApiBox_SelectionChanged"
+                                      VerticalContentAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="模型" Style="{StaticResource SectionTextStyle}"/>
+                            <ComboBox x:Name="ModelBox" IsEditable="True" VerticalContentAlignment="Center"
+                                      SelectionChanged="ModelBox_Changed" LostFocus="ModelBox_Changed"
+                                      ToolTip="可从下拉列表选择，也可以直接输入模型名"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock x:Name="ModelHint" Style="{StaticResource HintTextStyle}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="2" Margin="2,14,2,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="取消" Width="88" Height="32" IsCancel="True" Click="Cancel_Click"/>
+                <Button Content="确定" Width="88" Height="32" Margin="10,0,0,0"
+                        Style="{StaticResource AccentButtonStyle}" IsDefault="True" Click="Ok_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

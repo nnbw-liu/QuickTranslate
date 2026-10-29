@@ -1,8 +1,8 @@
 # 编译中间产物（dist 里的发布产物是要提交的，故不在此列）
 [Bb]in/
 [Oo]bj/
-src/NativeCore/build/
-src/NativeCore/x64/
+src/SDemo.NativeCore/build/
+src/SDemo.NativeCore/x64/
 *.user
 *.suo
 .vs/

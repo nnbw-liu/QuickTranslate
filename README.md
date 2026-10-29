@@ -1,6 +1,6 @@
-# QuickTranslate 翻译助手
+# SDemo.QuickTranslate 翻译助手
 
-一个**后台常驻的托盘翻译工具**：在任何程序中选中文本或图片，按下热键即可通过 **OpenAI 兼容接口**翻译为指定语言，结果以浮窗形式显示在选中内容附近；也可以按 `Ctrl+Alt+I` **弹出置顶输入框**，自己填内容再翻译。WPF + C# 主程序，**C++ 原生库 (NativeCore.dll)** 负责系统级操作，两者通过 P/Invoke 互操作。
+一个**后台常驻的托盘翻译工具**：在任何程序中选中文本或图片，按下热键即可通过 **OpenAI 兼容接口**翻译为指定语言，结果以浮窗形式显示在选中内容附近；也可以按 `Ctrl+Alt+I` **弹出置顶输入框**，自己填内容再翻译。WPF + C# 主程序，**C++ 原生库 (SDemo.NativeCore.dll)** 负责系统级操作，两者通过 P/Invoke 互操作。
 
 ---
 
@@ -35,36 +35,36 @@
 - **生成回复的语言**：由每条热键自己的「目标语言」决定（该热键没设语言时跟随原文语言）；浮窗里的「生成回复」按钮沿用触发它的那条热键的语言，因此不再需要单独的全局设置。
 - **提示词**：优先级为「**热键单独设置的提示词 > 功能默认提示词 > 内置默认**」。典型用法：把一条热键的动作设为「生成回复」，再给它单独写一套邮件回复提示词，就得到一条「专门回邮件」的热键；同时再保留一条通用回复热键互不影响。
 - **打开首选项时暂停全局热键**：避免录入热键时触发已有热键（冲突），关闭窗口后自动恢复（恢复失败会在托盘气泡提示）。
-- **淡蓝主题界面**：统一的淡蓝配色 + 圆角控件（按钮、输入框、下拉框、复选框、单选框、标签页、滑块、滚动条、进度条），主题集中在 `src/QuickTranslate/Themes/LightBlue.xaml`，改这一个文件即可换肤。
+- **淡蓝主题界面**：统一的淡蓝配色 + 圆角控件（按钮、输入框、下拉框、复选框、单选框、标签页、滑块、滚动条、进度条），主题集中在 `src/SDemo.QuickTranslate/Themes/LightBlue.xaml`，改这一个文件即可换肤。
 
 ---
 
 ## 项目结构
 
 ```
-QuickTranslate/
-├── QuickTranslate.slnx          # VS 解决方案（含 C++ 与 C# 两个项目）
-├── build.ps1 / build.cmd        # 一键构建
+QuickTranslate/                      # 仓库根目录（GitHub 仓库名同为 QuickTranslate）
+├── SDemo.QuickTranslate.slnx        # VS 解决方案（含 C++ 与 C# 两个项目）
+├── build.ps1 / build.cmd            # 一键构建
 ├── README.md
-├── assets/app.ico               # 应用/托盘图标
-├── scripts/make-icon.ps1        # 图标生成脚本
+├── assets/app.ico                   # 应用/托盘图标
+├── scripts/make-icon.ps1            # 图标生成脚本
 └── src/
-    ├── NativeCore/              # ★ C++ 原生库（C API，供 C# P/Invoke 调用）
-    │   ├── NativeCore.h         #   接口声明
-    │   ├── NativeCore.cpp       #   Win32：模拟 Ctrl+C、剪贴板、屏幕截图、窗口/光标信息
-    │   ├── OcrCppWinrt.cpp      #   C++/WinRT：Windows.Media.Ocr 文字识别
-    │   ├── NativeCore.vcxproj   #   MSBuild 工程（VS 2026 / v145）
-    │   └── CMakeLists.txt       #   备用 CMake 构建
-    └── QuickTranslate/          # ★ WPF + C# 主程序
-        ├── App.xaml(.cs)        #   入口：托盘 + 热键 + 编排
-        ├── Themes/              #   淡蓝主题（配色 + 圆角控件样式）
-        ├── Native/              #   user32 P/Invoke + NativeCore.dll 封装（含托管回退）
-        ├── Models/              #   设置、热键、捕获结果
-        ├── Services/            #   设置持久化、热键管理、托盘、选中捕获、OCR、API 客户端、编排
-        └── Views/               #   首选项窗口、翻译结果浮窗、输入翻译窗口、截图框选遮罩、提示词编辑器、模型选择对话框、帮助窗口
+    ├── SDemo.NativeCore/            # ★ C++ 原生库（C API，供 C# P/Invoke 调用）
+    │   ├── SDemo.NativeCore.h       #   接口声明
+    │   ├── SDemo.NativeCore.cpp     #   Win32：模拟 Ctrl+C、剪贴板、屏幕截图、窗口/光标信息
+    │   ├── OcrCppWinrt.cpp          #   C++/WinRT：Windows.Media.Ocr 文字识别
+    │   ├── SDemo.NativeCore.vcxproj #   MSBuild 工程（VS 2026 / v145）
+    │   └── CMakeLists.txt           #   备用 CMake 构建
+    └── SDemo.QuickTranslate/        # ★ WPF + C# 主程序
+        ├── App.xaml(.cs)            #   入口：托盘 + 热键 + 编排
+        ├── Native/                  #   user32 P/Invoke + SDemo.NativeCore.dll 封装（含托管回退）
+        ├── Models/                  #   设置、热键、捕获结果
+        ├── Services/                #   设置持久化、热键管理、托盘、选中捕获、OCR、API 客户端、编排
+        ├── Themes/                  #   淡蓝主题（配色 + 圆角控件样式）
+        └── Views/                   #   首选项窗口、翻译结果浮窗、输入翻译窗口、截图框选遮罩、提示词编辑器、模型选择对话框、帮助窗口
 ```
 
-**C++ / C# 混编方式**：`NativeCore.dll` 以 C ABI 导出函数，C# 通过 `[DllImport]` 调用（见 `src/QuickTranslate/Native/NativeCore.cs`）。原生库缺失或调用失败时**自动回退**到托管实现，应用仍可正常工作。想扩展 C++ 能力，只需在 `NativeCore.cpp` 添加导出函数并在 `NativeCore.cs` 添加对应声明。
+**C++ / C# 混编方式**：`SDemo.NativeCore.dll` 以 C ABI 导出函数，C# 通过 `[DllImport]` 调用（见 `src/SDemo.QuickTranslate/Native/SDemoNativeCore.cs`）。原生库缺失或调用失败时**自动回退**到托管实现，应用仍可正常工作。想扩展 C++ 能力，只需在 `SDemo.NativeCore.cpp` 添加导出函数并在 `SDemoNativeCore.cs` 添加对应声明。
 
 ---
 
@@ -78,7 +78,7 @@ QuickTranslate/
 ## 构建
 
 ```powershell
-# 一键构建并发布（框架依赖）到 dist\QuickTranslate
+# 一键构建并发布（框架依赖）到 dist\SDemo.QuickTranslate
 .\build.ps1
 
 # 或自包含免安装版本
@@ -88,13 +88,13 @@ QuickTranslate/
 .\build.ps1 -NoPublish
 ```
 
-也可直接用 VS 打开 `QuickTranslate.slnx` 编译（注意：C# 项目通过 csproj 自动复制原生 DLL，若提示缺少 NativeCore.dll，先单独编译 NativeCore 项目或运行 build.ps1）。
+也可直接用 VS 打开 `SDemo.QuickTranslate.slnx` 编译（注意：C# 项目通过 csproj 自动复制原生 DLL，若提示缺少 SDemo.NativeCore.dll，先单独编译 SDemo.NativeCore 项目或运行 build.ps1）。
 
 ---
 
 ## 使用步骤
 
-1. 运行 `QuickTranslate.exe`，右下角托盘出现图标。
+1. 运行 `SDemo.QuickTranslate.exe`，右下角托盘出现图标。
 2. 右键托盘图标 → **首选项 → 模型**：点「＋ 添加」选一个预设（或「空白 API…」），填好**接口地址**与 **API Key**，再点 **「获取模型列表」**把可用模型拉进下拉框；然后在「常用模型」里挑一个，最后在下方「默认模型」里选定 **哪一家的哪个模型作为默认**，保存即可。
    - 支持任意 OpenAI 兼容接口：OpenAI、DeepSeek、通义千问、智谱、Ollama、LM Studio 等；**可以添加多个**，每个 API 的地址 / Key / 模型 / 参数各存一套，互不影响。
    - 不知道模型名？填好「接口地址」与「API Key」后点 **「获取模型列表」**，程序会调用 `GET {接口地址}/models` 拉取可用模型并**清空旧列表后重新填入**下拉框（同时兼容 Ollama 的 `{models:[{name}]}` 返回格式），选中后保存即可；也可以手动输入模型名。拉取到的列表会缓存到设置里，下次打开可直接选择。
@@ -128,12 +128,12 @@ QuickTranslate/
 - **生成回复用什么语言**：用该热键自己的「目标语言」；托盘菜单的「生成回复」和没设语言的热键则跟随原文语言。
 - **输入翻译窗口怎么用 / 为什么是置顶的**：`Ctrl+Alt+I`（或托盘菜单「输入翻译」）弹出输入窗口，它声明了 `Topmost`（始终置顶），不会被别的窗口盖住；输入内容后 `Ctrl+Enter` 翻译。目标语言默认预选「上次用过的语言」，若这条热键自己设了「目标语言」则以它为准（例如把一条「输入翻译」热键的目标语言设为 `English`，它每次都会以英文为目标）。**翻译过程中按 `Esc` 会立刻中断本次推理并关闭窗口**（点「停止」等效，已生成的部分会保留在窗口里）；窗口关闭后焦点自动还给原来的程序，不影响下一次「选中即翻译」。
 - **升级后为什么多了一条 Ctrl+Alt+I 热键**：这是「输入翻译」功能的默认热键，首次加载老配置时会自动补上（只补一次，之后在首选项里删掉就不会再加回来）。用不到可以在首选项 → 热键里改键或直接禁用。
-- **配置存放位置**：`%APPDATA%\QuickTranslate\settings.json`；日志在 `%APPDATA%\QuickTranslate\logs\`（含捕获方式、截图选区尺寸、OCR 长度、首字耗时、思考长度等，便于排查）。
+- **配置存放位置**：`%APPDATA%\SDemo\QuickTranslate\settings.json`；日志在 `%APPDATA%\SDemo\QuickTranslate\logs\`（含捕获方式、截图选区尺寸、OCR 长度、首字耗时、思考长度等，便于排查）。
 
 > **排查小工具**：
-> - `QuickTranslate.exe --diag`：选中一段内容后运行，会自动连续捕获两次，并把前台窗口信息与捕获结果写入日志，用于确认捕获链路是否正常。
-> - `QuickTranslate.exe --selftest [--to=English] [--tokens=64] [--think] [--reply] [--base=...] [--model=...] [--text="..."]`：**无界面自检**，直接把一段文字走一遍流式翻译/生成回复，把「实际生效的关闭思考参数、思考与正文各自的首个增量时间点、增量条数、finish_reason、是否被截断」写进日志（正文同时写入 `%TEMP%\qt-selftest-result.txt`），退出码 0 表示拿到了正文。用来快速确认「思考到底关掉没有 / 是不是真流式 / 最大输出 Token 生效没有」。
-> - `QuickTranslate.exe --window=prefs|models|help|popup|input`：只打开指定窗口（首选项 / 首选项的「模型」页 / 帮助 / 示例翻译浮窗 / 示例输入翻译窗口，后两者带实时思考与「已达上限」提示条），不注册托盘与热键，用于界面调试与截图，关闭窗口即退出。`--window=input` 打开的是**可用**的输入翻译窗口（配置已加载，可以直接输入内容翻译，用来端到端验证）。
+> - `SDemo.QuickTranslate.exe --diag`：选中一段内容后运行，会自动连续捕获两次，并把前台窗口信息与捕获结果写入日志，用于确认捕获链路是否正常。
+> - `SDemo.QuickTranslate.exe --selftest [--to=English] [--tokens=64] [--think] [--reply] [--base=...] [--model=...] [--text="..."]`：**无界面自检**，直接把一段文字走一遍流式翻译/生成回复，把「实际生效的关闭思考参数、思考与正文各自的首个增量时间点、增量条数、finish_reason、是否被截断」写进日志（正文同时写入 `%TEMP%\sdemo-selftest-result.txt`），退出码 0 表示拿到了正文。用来快速确认「思考到底关掉没有 / 是不是真流式 / 最大输出 Token 生效没有」。
+> - `SDemo.QuickTranslate.exe --window=prefs|models|help|popup|input`：只打开指定窗口（首选项 / 首选项的「模型」页 / 帮助 / 示例翻译浮窗 / 示例输入翻译窗口，后两者带实时思考与「已达上限」提示条），不注册托盘与热键，用于界面调试与截图，关闭窗口即退出。`--window=input` 打开的是**可用**的输入翻译窗口（配置已加载，可以直接输入内容翻译，用来端到端验证）。
 
 ---
 
@@ -141,7 +141,7 @@ QuickTranslate/
 
 - **DPI**：系统 DPI 感知（manifest），坐标换算统一处理物理像素与 WPF DIP。
 - **选中内容捕获**：优先 UI Automation 的 **TextPattern 真实选中**（不干扰剪贴板）；再退到「模拟 Ctrl+C → 剪贴板序号必须变化才认 → 恢复剪贴板」；最后才在单行输入框（Edit/ComboBox，长度受限）取整个内容兜底。捕获**之前**会等前台窗口不再是本程序，避免读到自己弹窗。
-- **截图翻译**：`Views/ScreenCaptureWindow.xaml` 提供全屏半透明遮罩 + 拖拽框选（`CombinedGeometry` 挖洞显示选区），选区按 DIP↔物理像素换算后由 `NativeCore.QtCaptureScreenToBmp` 截取；截图在遮罩关闭、浮窗创建**之前**完成，避免把自身界面截进图里。
+- **截图翻译**：`Views/ScreenCaptureWindow.xaml` 提供全屏半透明遮罩 + 拖拽框选（`CombinedGeometry` 挖洞显示选区），选区按 DIP↔物理像素换算后由 `SDemo.NativeCore.SDemoCaptureScreenToBmp` 截取；截图在遮罩关闭、浮窗创建**之前**完成，避免把自身界面截进图里。
 - **关闭思考**：翻译类请求一次性带上 `thinking.type=disabled`、`enable_thinking=false`、`chat_template_kwargs.enable_thinking=false`、`reasoning_effort=none` 四种参数（不同服务端认的不同，不认识的参数一般被忽略）；接口返回 400/422 时按「逐个去掉」的顺序重试，可用的组合按 `地址|模型` 缓存，后续请求直接用，不再试错。全都不可用时照常请求（模型仍会思考），此时思考过程实时显示。实现见 `OpenAIClient.ThinkOffProfiles`。
 - **提示词解析**：`TranslateController.ResolvePrompt(热键提示词, 功能默认提示词)` 决定本次请求的 system 提示词；思考内容始终从接口读取并**实时显示**（翻译与生成回复一样），正文为空时提示可调大「最大输出 Token」。
 - **输入翻译**：`Views/InputTranslateWindow.xaml(.cs)` 是独立的置顶窗口（`Topmost=True`，非模态），由 `TranslateController.ShowInputTranslate` 打开/复用，窗口内自己持有一个 `CancellationTokenSource`：`Esc` / 「停止」/ 关闭窗口 / 再按其它热键都会 `Cancel()`，从而立刻中断流式推理（`TranslateController.CancelCurrent` 会一并取消它）。流式展示与「最大输出 Token 截断」提示走的是同一份代码——`PopupWindow` 与它都实现 `Views/IStreamSink.cs`，`TranslateController.StreamIntoAsync` 只认这个接口。
@@ -149,3 +149,12 @@ QuickTranslate/
 - **多 API 与模型解析**：`Services/ApiCatalog.cs` 负责把一次请求解析成具体的「API + 模型」：`Resolve(热键条目)` 按 **热键模型 → 默认模型 → 第一个可用 API** 逐级查找（前一级引用的 API 被删/模型为空时回退并在日志写明，找不到任何可用模型才抛错），并按「API + 模型 + 参数」缓存 `OpenAIClient`（改设置后 `Clear()` 失效，避免每次请求新建 `HttpClient`）。每个 `ApiProvider` 自带地址 / Key / 模型列表 / 温度 / 最大输出 Token / 超时 / 图片翻译方式，因此不同功能可以走不同服务端。设置结构见 `Models/AppSettings.cs`（旧的单 API 字段 `api` 仍保留并在保存时同步成「默认模型」，保证旧版本可读、`--selftest` 可用）。
 - **API**：`POST {BaseUrl}/chat/completions`，支持文本与多模态（图片 base64）消息；默认 `stream=true` 流式返回，SSE 增量同时解析正文与思考字段（`reasoning_content` / `reasoning` / `thinking`），并读取 `finish_reason` 与 `usage`。`max_tokens` 被服务端忽略时按增量条数在客户端兜底截断；超过「超时」秒没有任何新数据则中止并提示，避免界面无限转圈。模型列表通过 `GET {BaseUrl}/models` 获取。
 - **界面主题**：所有控件样式集中在 `Themes/LightBlue.xaml`（`App.xaml` 中以 `MergedDictionaries` 引入），采用 WPF 控件模板重写实现圆角与淡蓝配色，不依赖第三方 UI 库。
+- **命名空间**：C# 统一使用 `SDemo` 前缀，根命名空间为 `SDemo.QuickTranslate`（子命名空间 `SDemo.QuickTranslate.Models` / `.Services` / `.Views` / `.Native`），XAML 的 `x:Class` 与之对应；项目文件、程序集与可执行文件名也已统一为 `SDemo.QuickTranslate`。
+
+---
+
+## 署名
+
+- 作者 / 版权：**SDemo**
+- 项目 / 解决方案（`src/SDemo.QuickTranslate/SDemo.QuickTranslate.csproj`、`SDemo.QuickTranslate.slnx`）与程序集属性：`Company=SDemo`、`Copyright=Copyright © SDemo`、`AssemblyTitle=SDemo.QuickTranslate 翻译助手`、`Product=SDemo.QuickTranslate`
+- 界面署名：「帮助」窗口底部「SDemo 出品 · SDemo.QuickTranslate v0.1.0」

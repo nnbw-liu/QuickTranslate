@@ -1,0 +1,41 @@
+<Window x:Class="SDemo.QuickTranslate.Views.PromptEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="提示词 - SDemo.QuickTranslate"
+        Height="420" Width="600"
+        MinHeight="320" MinWidth="460"
+        WindowStartupLocation="CenterOwner"
+        Style="{StaticResource AppWindowStyle}">
+
+    <Grid Margin="16,14,16,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="2,0,2,10">
+            <TextBlock x:Name="HeadText" Style="{StaticResource TitleTextStyle}"/>
+            <TextBlock x:Name="SubText" Style="{StaticResource HintTextStyle}" Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}">
+            <TextBox x:Name="PromptBox" AcceptsReturn="True" TextWrapping="Wrap"
+                     VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
+                     BorderThickness="0" Background="Transparent" Margin="4"
+                     FontSize="12.5"/>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="2,12,2,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <Button x:Name="ClearBtn" Content="清空（用默认）" Height="32" Click="Clear_Click"
+                        ToolTip="清空后该热键使用对应功能的默认提示词"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="取消" Width="88" Height="32" IsCancel="True" Click="Cancel_Click"/>
+                <Button Content="确定" Width="88" Height="32" Margin="10,0,0,0"
+                        Style="{StaticResource AccentButtonStyle}" IsDefault="True" Click="Ok_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
